@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   IonPage, IonContent, IonHeader, IonToolbar, IonTitle,
   IonTabBar, IonTabButton, IonIcon, IonLabel, IonCard, IonCardContent,
-  IonCardHeader, IonCardTitle, IonToggle, IonList, IonItem,
+  IonToggle, IonList, IonItem,
   IonAlert, IonButton, IonText, IonToast, IonBadge
 } from '@ionic/react';
 import {
@@ -14,34 +14,25 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 
-const G = {
-  dark:   '#1b5e20',
-  main:   '#2e7d32',
-  mid:    '#43a047',
-  light:  '#66bb6a',
-  pale:   '#e8f5e9',
-  border: '#a5d6a7',
-};
-
 const styles = `
-  .sn-page { background: #f1f8f1; }
+  .sn-page { background: var(--app-bg); }
   .sn-card {
     border-radius: 18px; margin: 0 0 16px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.07);
-    border: 1px solid #e0f2e0;
+    border: 1px solid var(--border-green);
   }
   .sn-header-band {
-    background: linear-gradient(135deg, #2e7d32, #43a047);
+    background: linear-gradient(135deg, var(--primary-green), var(--mid-green));
     padding: 28px 20px 24px; color: white;
   }
   .sn-section-label {
-    font-size: 13px; font-weight: 800; color: #558b2f;
+    font-size: 13px; font-weight: 800; color: var(--soft-green);
     text-transform: uppercase; letter-spacing: 1px;
     padding: 18px 4px 8px;
   }
   .sn-toggle-row {
     display: flex; align-items: center;
-    padding: 16px 0; border-bottom: 1px solid #f0f7f0;
+    padding: 16px 0; border-bottom: 1px solid var(--light-green);
   }
   .sn-toggle-row:last-child { border-bottom: none; }
   .sn-icon-wrap {
@@ -51,7 +42,7 @@ const styles = `
   }
   .sn-activity-row {
     display: flex; align-items: center; gap: 12px;
-    padding: 13px 0; border-bottom: 1px solid #f0f7f0;
+    padding: 13px 0; border-bottom: 1px solid var(--light-green);
   }
   .sn-activity-row:last-child { border-bottom: none; }
   .sn-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -62,8 +53,7 @@ const styles = `
     font-size: 30px; font-weight: 800; color: white;
     margin: 0 auto 12px; border: 3px solid rgba(255,255,255,0.5);
   }
-  .sn-tab-bar { --background: white; border-top: 1px solid #e0f2e0; }
-  ion-tab-button { --color: #888; --color-selected: #2e7d32; }
+  ion-tab-button { --color: #888; --color-selected: var(--primary-green); }
   .sos-btn {
     width: 150px; height: 150px; border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #ef5350, #b71c1c);
@@ -77,9 +67,9 @@ const styles = `
   }
   .sos-btn:active { transform: scale(0.96); }
   .location-box {
-    background: #f1f8f1; border-radius: 14px;
+    background: var(--light-green); border-radius: 14px;
     padding: 16px; margin-top: 14px;
-    border: 1px solid #c8e6c9;
+    border: 1px solid var(--border-green);
   }
 `;
 
@@ -95,14 +85,11 @@ const Dashboard: React.FC = () => {
   const [saveMsg, setSaveMsg] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile>({ username: '', contact: '', email: '', displayName: '' });
   const [notif, setNotif] = useState<NotifSettings>({ sms: true, location: false, alerts: true });
-
   const [showSosAlert, setShowSosAlert] = useState(false);
   const [showSosToast, setShowSosToast] = useState(false);
-
   const [fallAlert, setFallAlert] = useState(false);
   const [shakeAlert, setShakeAlert] = useState(true);
   const [noMovementAlert, setNoMovementAlert] = useState(false);
-
   const [locationShared, setLocationShared] = useState(false);
 
   useEffect(() => {
@@ -131,8 +118,6 @@ const Dashboard: React.FC = () => {
   // ── DASHBOARD ─────────────────────────────────────────────────
   const renderDashboard = () => (
     <IonContent className="sn-page">
-
-      {/* Greeting band */}
       <div className="sn-header-band">
         <p style={{ margin: 0, fontSize: '15px', opacity: 0.85 }}>Hello,</p>
         <h2 style={{ margin: '2px 0 0', fontSize: '24px', fontWeight: 800 }}>{userProfile.displayName} 👋</h2>
@@ -147,7 +132,7 @@ const Dashboard: React.FC = () => {
             <IonIcon icon={warningOutline} style={{ fontSize: '36px', marginBottom: '4px' }} />
             SOS
           </button>
-          <p style={{ color: '#888', fontSize: '14px', marginTop: '12px' }}>
+          <p style={{ color: 'var(--soft-green)', fontSize: '14px', marginTop: '12px' }}>
             Press for emergency help
           </p>
         </div>
@@ -180,8 +165,8 @@ const Dashboard: React.FC = () => {
         {/* Status row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '20px' }}>
           {[
-            { label: 'Alerts Today', value: '3', bg: G.main },
-            { label: 'You are Safe', value: '✓', bg: '#388e3c' },
+            { label: 'Alerts Today', value: '3', bg: 'var(--primary-green)' },
+            { label: 'You are Safe', value: '✓', bg: 'var(--soft-green)' },
           ].map((s, i) => (
             <div key={i} style={{
               background: s.bg, borderRadius: '16px', padding: '18px 14px',
@@ -200,15 +185,15 @@ const Dashboard: React.FC = () => {
             {[
               { label: 'Fall Alert', desc: 'Alerts if you fall suddenly', icon: bodyOutline, iconBg: '#fce4ec', iconColor: '#c62828', checked: fallAlert, set: setFallAlert },
               { label: 'Shake to Alert', desc: 'Shake your phone to call for help', icon: phonePortraitOutline, iconBg: '#fff8e1', iconColor: '#f57f17', checked: shakeAlert, set: setShakeAlert },
-              { label: 'No Movement Alert', desc: 'Alerts if no movement for a while', icon: timeOutline, iconBg: '#e8f5e9', iconColor: G.main, checked: noMovementAlert, set: setNoMovementAlert },
+              { label: 'No Movement Alert', desc: 'Alerts if no movement for a while', icon: timeOutline, iconBg: 'var(--light-green)', iconColor: 'var(--primary-green)', checked: noMovementAlert, set: setNoMovementAlert },
             ].map((item, i) => (
               <div key={i} className="sn-toggle-row">
                 <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
                   <IonIcon icon={item.icon} style={{ fontSize: '22px', color: item.iconColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: '#1a1a1a' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#777' }}>{item.desc}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: 'var(--dark-green)' }}>{item.label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>{item.desc}</p>
                 </div>
                 <IonToggle checked={item.checked} onIonChange={() => item.set((p: boolean) => !p)} color="success" />
               </div>
@@ -224,7 +209,7 @@ const Dashboard: React.FC = () => {
               expand="block"
               onClick={() => setLocationShared(true)}
               style={{
-                '--background': locationShared ? G.mid : G.main,
+                '--background': locationShared ? 'var(--mid-green)' : 'var(--primary-green)',
                 '--border-radius': '12px',
                 height: '50px', fontSize: '16px', fontWeight: 700
               }}
@@ -235,13 +220,13 @@ const Dashboard: React.FC = () => {
             {locationShared && (
               <div className="location-box">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <IonIcon icon={checkmarkCircleOutline} style={{ color: G.main, fontSize: '20px' }} />
-                  <span style={{ fontWeight: 700, fontSize: '15px', color: G.dark }}>Location Shared</span>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ color: 'var(--primary-green)', fontSize: '20px' }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--dark-green)' }}>Location Shared</span>
                 </div>
-                <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--soft-green)' }}>
                   Last updated: <strong>Just now</strong>
                 </p>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#888' }}>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>
                   Your contacts can see your location
                 </p>
               </div>
@@ -254,7 +239,7 @@ const Dashboard: React.FC = () => {
         <IonCard className="sn-card">
           <IonCardContent style={{ padding: '4px 16px' }}>
             {[
-              { color: '#43a047', text: 'You are connected and safe', time: '2m ago' },
+              { color: 'var(--mid-green)', text: 'You are connected and safe', time: '2m ago' },
               { color: '#f59e0b', text: 'Location shared with contacts', time: '15m ago' },
               { color: '#3b82f6', text: 'SMS alert was sent', time: '1h ago' },
               { color: '#ef5350', text: 'Unknown access blocked', time: '3h ago' },
@@ -262,7 +247,7 @@ const Dashboard: React.FC = () => {
               <div key={i} className="sn-activity-row">
                 <div className="sn-dot" style={{ backgroundColor: item.color }} />
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: '15px', color: '#222' }}>{item.text}</p>
+                  <p style={{ margin: 0, fontSize: '15px', color: 'var(--dark-green)' }}>{item.text}</p>
                 </div>
                 <span style={{ fontSize: '12px', color: '#aaa', whiteSpace: 'nowrap' }}>{item.time}</span>
               </div>
@@ -277,7 +262,6 @@ const Dashboard: React.FC = () => {
   // ── PROFILE ───────────────────────────────────────────────────
   const renderProfile = () => (
     <IonContent className="sn-page">
-      {/* Header */}
       <div className="sn-header-band" style={{ textAlign: 'center', paddingBottom: '32px' }}>
         <div className="sn-avatar">{userProfile.displayName.charAt(0).toUpperCase() || '?'}</div>
         {editingName ? (
@@ -306,24 +290,24 @@ const Dashboard: React.FC = () => {
           <IonCardContent style={{ padding: '4px 0' }}>
             <IonList lines="inset">
               <IonItem style={{ '--background': 'transparent' }}>
-                <IonIcon icon={callOutline} slot="start" style={{ color: G.main, fontSize: '22px' }} />
+                <IonIcon icon={callOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
                 <IonLabel>
-                  <p style={{ fontSize: '13px', color: '#888', margin: '0 0 2px' }}>Phone Number</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700 }}>{userProfile.contact}</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Phone Number</p>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--dark-green)' }}>{userProfile.contact}</h3>
                 </IonLabel>
               </IonItem>
               <IonItem style={{ '--background': 'transparent' }}>
-                <IonIcon icon={mailOutline} slot="start" style={{ color: G.main, fontSize: '22px' }} />
+                <IonIcon icon={mailOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
                 <IonLabel>
-                  <p style={{ fontSize: '13px', color: '#888', margin: '0 0 2px' }}>Email</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700 }}>{userProfile.email}</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Email</p>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--dark-green)' }}>{userProfile.email}</h3>
                 </IonLabel>
               </IonItem>
               <IonItem lines="none" style={{ '--background': 'transparent' }}>
-                <IonIcon icon={shieldCheckmarkOutline} slot="start" style={{ color: G.main, fontSize: '22px' }} />
+                <IonIcon icon={shieldCheckmarkOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
                 <IonLabel>
-                  <p style={{ fontSize: '13px', color: '#888', margin: '0 0 2px' }}>Account Status</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: G.main }}>✓ Verified & Protected</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Account Status</p>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--primary-green)' }}>✓ Verified & Protected</h3>
                 </IonLabel>
               </IonItem>
             </IonList>
@@ -363,18 +347,18 @@ const Dashboard: React.FC = () => {
         <p className="sn-section-label">How to Reach You</p>
         <IonCard className="sn-card">
           <IonCardContent style={{ padding: '4px 16px' }}>
-            {[
-              { key: 'sms' as const, icon: chatbubbleOutline, iconBg: '#e8f5e9', iconColor: G.main, label: 'Text Message (SMS)', desc: 'Get alerts as a text on your phone' },
+            {([
+              { key: 'sms' as const, icon: chatbubbleOutline, iconBg: 'var(--light-green)', iconColor: 'var(--primary-green)', label: 'Text Message (SMS)', desc: 'Get alerts as a text on your phone' },
               { key: 'alerts' as const, icon: alertCircleOutline, iconBg: '#fff3e0', iconColor: '#e65100', label: 'Emergency Alerts', desc: 'Urgent safety notifications' },
               { key: 'location' as const, icon: locationOutline, iconBg: '#fce4ec', iconColor: '#c62828', label: 'Share My Location', desc: 'Let contacts know where you are' },
-            ].map(item => (
+            ]).map(item => (
               <div key={item.key} className="sn-toggle-row">
                 <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
                   <IonIcon icon={item.icon} style={{ fontSize: '22px', color: item.iconColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: '#1a1a1a' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#777' }}>{item.desc}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: 'var(--dark-green)' }}>{item.label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>{item.desc}</p>
                 </div>
                 <IonToggle checked={notif[item.key]} onIonChange={() => toggleNotif(item.key)} color="success" />
               </div>
@@ -385,7 +369,7 @@ const Dashboard: React.FC = () => {
         <IonButton
           expand="block"
           onClick={() => { setSaveMsg('Settings saved!'); setTimeout(() => setSaveMsg(''), 2500); }}
-          style={{ '--background': G.main, '--border-radius': '14px', height: '52px', fontSize: '17px', fontWeight: 700, marginTop: '8px' }}
+          style={{ '--background': 'var(--primary-green)', '--border-radius': '14px', height: '52px', fontSize: '17px', fontWeight: 700, marginTop: '8px' }}
         >
           <IonIcon icon={checkmarkCircleOutline} slot="start" />
           Save Settings
@@ -404,7 +388,7 @@ const Dashboard: React.FC = () => {
     <IonPage>
       <style>{styles}</style>
       <IonHeader>
-        <IonToolbar style={{ '--background': G.main, '--color': 'white' }}>
+        <IonToolbar color="primary">
           <IonTitle style={{ fontWeight: 800, fontSize: '20px' }}>🛡️ SafeNode</IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -413,7 +397,7 @@ const Dashboard: React.FC = () => {
       {activeTab === 'profile' && renderProfile()}
       {activeTab === 'notifications' && renderNotifications()}
 
-      <IonTabBar slot="bottom" className="sn-tab-bar">
+      <IonTabBar slot="bottom">
         <IonTabButton tab="dashboard" selected={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
           <IonIcon icon={homeOutline} />
           <IonLabel>Home</IonLabel>

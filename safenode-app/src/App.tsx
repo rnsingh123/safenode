@@ -47,7 +47,6 @@ import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
 // ===== THEME CSS =====
-import '@ionic/react/css/palettes/dark.system.css';
 import './theme/variables.css';
 
 // Initialize Ionic React framework

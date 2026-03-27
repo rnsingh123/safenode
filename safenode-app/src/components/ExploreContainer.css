@@ -1,24 +1,40 @@
+/**
+ * ============================================================================
+ * EXPLORECONTAINER.CSS - Style for ExploreContainer Component
+ * ============================================================================
+ * Purpose: Styling for the explore container template
+ * 
+ * Debug Tips:
+ * - Use DevTools to inspect element styles
+ * - Check if styles are being overridden by Ionic defaults
+ * ============================================================================
+ */
+
+/* Main container - centered vertically and horizontally on screen */
 #container {
-  text-align: center;
-  position: absolute;
-  left: 0;
+  text-align: center;           /* Center all text content */
+  position: absolute;           /* Use absolute positioning for centering */
+  left: 0;                      /* Full width coverage */
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 50%;                     /* Position at vertical center */
+  transform: translateY(-50%);  /* Adjust for container height */
 }
 
+/* Strong text (heading) styling */
 #container strong {
-  font-size: 20px;
-  line-height: 26px;
+  font-size: 20px;              /* Heading size */
+  line-height: 26px;            /* Line height for readability */
 }
 
+/* Paragraph styling */
 #container p {
-  font-size: 16px;
-  line-height: 22px;
-  color: #8c8c8c;
-  margin: 0;
+  font-size: 16px;              /* Body text size */
+  line-height: 22px;            /* Line height for readability */
+  color: #8c8c8c;               /* Gray color for secondary text */
+  margin: 0;                    /* Remove default margins */
 }
 
+/* Link styling */
 #container a {
-  text-decoration: none;
+  text-decoration: none;        /* Remove underline from links */
 }

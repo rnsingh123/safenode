@@ -1,0 +1,21 @@
+/**
+ * ============================================================================
+ * HOME.CSS - Styles for Home Page Component
+ * ============================================================================
+ * Purpose: CSS styling for the Home/Login page
+ * 
+ * Note: This file is currently empty.
+ * Styles are defined inline in Home.tsx using the styles variable or JSX style props
+ * 
+ * To migrate styles here:
+ * 1. Extract inline styles from Home.tsx
+ * 2. Add them to this file
+ * 3. Update Home.tsx to use CSS classes
+ * 
+ * Debug Tips:
+ * - Check DevTools for style conflicts
+ * - Test responsive design at different screen sizes
+ * ============================================================================
+ */
+
+/* Add Home page specific styles here */

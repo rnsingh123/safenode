@@ -1,2 +1,35 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/* SafeNode Theme Variables */
+:root {
+  /* 🌿 Brand Colors */
+  --primary-green:  #3d8b37;
+  --dark-green:     #1b5e20;
+  --light-green:    #e8f5e9;
+  --mid-green:      #66bb6a;
+  --soft-green:     #558b2f;
+  --border-green:   #a5d6a7;
+
+  /* 🌿 Background */
+  --app-bg: #f1f8f1;
+
+  /* 🌿 Text */
+  --text-primary:   #1b5e20;
+  --text-secondary: #558b2f;
+
+  /* Ionic overrides */
+  --ion-color-primary:           #3d8b37;
+  --ion-color-primary-rgb:       61,139,55;
+  --ion-color-primary-contrast:  #ffffff;
+  --ion-color-primary-shade:     #2e7d32;
+  --ion-color-primary-tint:      #66bb6a;
+
+  --ion-background-color:        #f1f8f1;
+  --ion-text-color:              #1b5e20;
+  --ion-border-color:            #a5d6a7;
+  --ion-item-background:         #ffffff;
+  --ion-toolbar-background:      #3d8b37;
+  --ion-toolbar-color:           #ffffff;
+  --ion-tab-bar-background:      #ffffff;
+  --ion-tab-bar-border-color:    #a5d6a7;
+  --ion-color-step-50:           #f1f8f1;
+  --ion-color-step-100:          #e8f5e9;
+}
