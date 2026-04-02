@@ -1,7 +1,13 @@
 /**
- * Dashboard.tsx — Main app shell with 3 tabs.
- * Existing login/session logic is untouched.
- * Tab structure: Home | Settings | Profile
+ * Dashboard.tsx — 3-tab app shell
+ * Logic: unchanged. UI: redesigned.
+ * ── EDIT GUIDE ──────────────────────────────────────────────
+ *  Global colors/spacing → src/theme/variables.css
+ *  Header band           → .sn-header-band
+ *  Card style            → .sn-card
+ *  Toggle rows           → .sn-toggle-row / .sn-icon-wrap
+ *  Tab bar               → IonTabBar at bottom of return
+ * ────────────────────────────────────────────────────────────
  */
 
 import React, { useState, useEffect } from 'react';
@@ -18,86 +24,109 @@ import {
   checkmarkCircleOutline, wifiOutline, navigateOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-
 import SosButton from '../components/sos/SosButton';
 import ContactsManager from '../components/contacts/ContactsManager';
 import { getSettings, saveSettings, AppSettings } from '../utils/storage';
 
-// ── Shared styles ─────────────────────────────────────────────
+/* ── [STYLE AREA] ── */
 const styles = `
-  .sn-page { background: var(--app-bg); }
+  /* Page background — [COLOR] change --clr-bg in variables.css */
+  .sn-page { background: var(--clr-bg); }
+
+  /* Card — used for every section block */
   .sn-card {
-    border-radius: 18px; margin: 0 0 16px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
-    border: 1px solid var(--border-green);
+    background: var(--clr-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--clr-primary-border);
+    margin: 0 0 var(--space-md);
+    overflow: hidden;
   }
+
+  /* Header gradient band at top of each tab */
   .sn-header-band {
-    background: linear-gradient(135deg, var(--primary-green), var(--mid-green));
-    padding: 28px 20px 24px; color: white;
+    background: linear-gradient(135deg, var(--clr-primary) 0%, var(--clr-primary-light) 100%);
+    padding: var(--space-xl) var(--space-md) var(--space-lg);
+    color: white;
   }
+
+  /* Section label above cards */
   .sn-section-label {
-    font-size: 13px; font-weight: 800; color: var(--soft-green);
-    text-transform: uppercase; letter-spacing: 1px;
-    padding: 18px 4px 8px;
+    font-size: var(--font-xs); font-weight: 800;
+    color: var(--clr-primary-muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    padding: var(--space-lg) 0 var(--space-sm);
   }
+
+  /* Toggle row inside cards */
   .sn-toggle-row {
     display: flex; align-items: center;
-    padding: 16px 0; border-bottom: 1px solid var(--light-green);
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--clr-primary-tint);
+    transition: background 0.15s;
   }
   .sn-toggle-row:last-child { border-bottom: none; }
+
+  /* Icon badge left of toggle label */
   .sn-icon-wrap {
-    width: 42px; height: 42px; border-radius: 12px;
+    width: 44px; height: 44px; border-radius: var(--radius-sm);
     display: flex; align-items: center; justify-content: center;
-    margin-right: 14px; flex-shrink: 0;
+    margin-right: var(--space-md); flex-shrink: 0;
   }
+
+  /* Profile avatar circle */
   .sn-avatar {
-    width: 76px; height: 76px; border-radius: 50%;
-    background: rgba(255,255,255,0.25);
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    border: 3px solid rgba(255,255,255,0.5);
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px; font-weight: 800; color: white;
-    margin: 0 auto 12px; border: 3px solid rgba(255,255,255,0.5);
+    font-size: 32px; font-weight: 900; color: white;
+    margin: 0 auto var(--space-sm);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
-  ion-tab-button { --color: #888; --color-selected: var(--primary-green); }
+
+  /* Location info box */
   .location-box {
-    background: var(--light-green); border-radius: 14px;
-    padding: 16px; margin-top: 14px;
-    border: 1px solid var(--border-green);
+    background: var(--clr-primary-tint);
+    border-radius: var(--radius-md);
+    padding: var(--space-md); margin-top: var(--space-md);
+    border: 1px solid var(--clr-primary-border);
   }
+
+  /* Signal strength bars */
   .signal-bar {
-    display: inline-block; width: 6px; border-radius: 3px;
-    background: var(--border-green); margin-right: 3px;
-    vertical-align: bottom;
+    display: inline-block; width: 5px; border-radius: 3px;
+    background: var(--clr-primary-border); margin-right: 3px;
+    vertical-align: bottom; transition: background 0.2s;
   }
-  .signal-bar.active { background: var(--primary-green); }
+  .signal-bar.active { background: var(--clr-primary); }
+
+  /* Tab bar */
+  ion-tab-button { --color: var(--clr-text-muted); --color-selected: var(--clr-primary); }
+
+  /* Fade-in for tab content */
+  @keyframes tabFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tab-content { animation: tabFade 0.25s ease both; }
 `;
 
 interface UserProfile { username: string; contact: string; email: string; displayName: string; }
 
 const Dashboard: React.FC = () => {
   const history = useHistory();
-  const [activeTab, setActiveTab] = useState<'home' | 'settings' | 'profile'>('home');
-
-  // User profile — loaded from sessionStorage (set by Login.tsx)
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    username: '', contact: '', email: '', displayName: ''
-  });
-
-  // Profile editing
-  const [editingName, setEditingName] = useState(false);
-  const [tempName, setTempName] = useState('');
+  const [activeTab, setActiveTab]         = useState<'home' | 'settings' | 'profile'>('home');
+  const [userProfile, setUserProfile]     = useState<UserProfile>({ username: '', contact: '', email: '', displayName: '' });
+  const [editingName, setEditingName]     = useState(false);
+  const [tempName, setTempName]           = useState('');
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
-
-  // App-wide settings — persisted in localStorage via storage.ts
-  const [settings, setSettings] = useState<AppSettings>(getSettings());
-
-  // Location state
+  const [settings, setSettings]           = useState<AppSettings>(getSettings());
   const [locationShared, setLocationShared] = useState(false);
-  const [locationTime, setLocationTime] = useState('');
+  const [locationTime, setLocationTime]   = useState('');
+  const [saveMsg, setSaveMsg]             = useState('');
 
-  // Settings save feedback
-  const [saveMsg, setSaveMsg] = useState('');
-
-  // Load user from session — redirect to login if missing
+  /* ── [AUTH GUARD] ── */
   useEffect(() => {
     const stored = sessionStorage.getItem('user');
     if (!stored) { history.replace('/login'); return; }
@@ -106,8 +135,7 @@ const Dashboard: React.FC = () => {
 
   const updateSetting = (key: keyof AppSettings, value: boolean) => {
     const updated = { ...settings, [key]: value };
-    setSettings(updated);
-    saveSettings(updated); // persist immediately
+    setSettings(updated); saveSettings(updated);
   };
 
   const saveDisplayName = () => {
@@ -119,257 +147,240 @@ const Dashboard: React.FC = () => {
     setEditingName(false);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('user');
-    history.replace('/login');
-  };
+  const handleLogout = () => { sessionStorage.removeItem('user'); history.replace('/login'); };
 
   const handleShareLocation = () => {
     setLocationShared(true);
     const now = new Date();
-    setLocationTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
-      ', ' + now.toLocaleDateString([], { day: 'numeric', month: 'short' }));
-    // TODO: Replace with real geolocation API + backend call
-    console.log('[Location] Simulated location share at', now.toISOString());
+    setLocationTime(
+      now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' +
+      now.toLocaleDateString([], { day: 'numeric', month: 'short' })
+    );
+    console.log('[Location] simulated share at', now.toISOString());
   };
 
-  // ── TAB 1: HOME ───────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     TAB 1 — HOME
+  ══════════════════════════════════════════════════════════ */
   const renderHome = () => (
     <IonContent className="sn-page">
+      {/* ── Header ── */}
       <div className="sn-header-band">
-        <p style={{ margin: 0, fontSize: '15px', opacity: 0.85 }}>Hello,</p>
-        <h2 style={{ margin: '2px 0 0', fontSize: '24px', fontWeight: 800 }}>{userProfile.displayName} 👋</h2>
-        <p style={{ margin: '6px 0 0', fontSize: '14px', opacity: 0.75 }}>You are protected. Stay safe.</p>
+        <p style={{ margin: 0, fontSize: 'var(--font-sm)', opacity: 0.8 }}>Hello,</p>
+        <h2 style={{ margin: '2px 0 0', fontSize: 'var(--font-xl)', fontWeight: 900, letterSpacing: '-0.3px' }}>
+          {userProfile.displayName} 👋
+        </h2>
+        <p style={{ margin: '6px 0 0', fontSize: 'var(--font-sm)', opacity: 0.75 }}>You are protected. Stay safe.</p>
       </div>
 
-      <div style={{ padding: '0 16px 32px' }}>
+      <div className="tab-content" style={{ padding: '0 var(--space-md) var(--space-xl)' }}>
 
-        {/* SOS — extracted component handles countdown + contacts */}
-        <SosButton onAlertSent={() => console.log('[Dashboard] SOS alert dispatched')} />
+        {/* ── SOS component ── */}
+        <SosButton onAlertSent={() => console.log('[Dashboard] SOS dispatched')} />
 
-        {/* Safety Features */}
+        {/* ── Safety Features ── */}
         <p className="sn-section-label">Safety Features</p>
-        <IonCard className="sn-card">
-          <IonCardContent style={{ padding: '4px 16px' }}>
+        <div className="sn-card">
+          <div style={{ padding: '0 var(--space-md)' }}>
             {([
-              { key: 'fallAlert' as const, label: 'Fall Alert', desc: 'Alerts if you fall suddenly', icon: bodyOutline, iconBg: '#fce4ec', iconColor: '#c62828' },
-              { key: 'shakeAlert' as const, label: 'Shake to Alert', desc: 'Shake your phone to call for help', icon: phonePortraitOutline, iconBg: '#fff8e1', iconColor: '#f57f17' },
-              { key: 'noMovementAlert' as const, label: 'No Movement Alert', desc: 'Alerts if no movement for a while', icon: timeOutline, iconBg: 'var(--light-green)', iconColor: 'var(--primary-green)' },
+              { key: 'fallAlert' as const,       label: 'Fall Alert',         desc: 'Alerts if you fall suddenly',          icon: bodyOutline,          iconBg: 'var(--clr-alert-tint)',    iconColor: 'var(--clr-alert)' },
+              { key: 'shakeAlert' as const,      label: 'Shake to Alert',     desc: 'Shake your phone to call for help',    icon: phonePortraitOutline, iconBg: 'var(--clr-warning-tint)',  iconColor: 'var(--clr-warning)' },
+              { key: 'noMovementAlert' as const, label: 'No Movement Alert',  desc: 'Alerts if no movement for a while',    icon: timeOutline,          iconBg: 'var(--clr-primary-tint)',  iconColor: 'var(--clr-primary)' },
             ]).map(item => (
               <div key={item.key} className="sn-toggle-row">
                 <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
                   <IonIcon icon={item.icon} style={{ fontSize: '22px', color: item.iconColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: 'var(--dark-green)' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>{item.desc}</p>
-                  {/* Sensor unavailable notice — future: check device capability */}
-                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#aaa' }}>Sensor integration coming soon</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>{item.label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>{item.desc}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--clr-text-muted)' }}>Sensor integration coming soon</p>
                 </div>
-                <IonToggle
-                  checked={settings[item.key]}
-                  onIonChange={() => updateSetting(item.key, !settings[item.key])}
-                  color="success"
-                />
+                <IonToggle checked={settings[item.key]}
+                  onIonChange={() => updateSetting(item.key, !settings[item.key])} color="success" />
               </div>
             ))}
-          </IonCardContent>
-        </IonCard>
+          </div>
+        </div>
 
-        {/* Location */}
+        {/* ── Location ── */}
         <p className="sn-section-label">My Location</p>
-        <IonCard className="sn-card">
-          <IonCardContent>
-            <IonButton
-              expand="block"
-              onClick={handleShareLocation}
+        <div className="sn-card">
+          <div style={{ padding: 'var(--space-md)' }}>
+            <IonButton expand="block" onClick={handleShareLocation}
               style={{
-                '--background': locationShared ? 'var(--mid-green)' : 'var(--primary-green)',
-                '--border-radius': '12px', height: '50px', fontSize: '16px', fontWeight: 700
-              }}
-            >
+                '--background': locationShared ? 'var(--clr-primary-light)' : 'var(--clr-primary)',
+                '--border-radius': 'var(--radius-sm)',
+                '--box-shadow': 'var(--shadow-sm)',
+                height: '52px', fontSize: 'var(--font-md)', fontWeight: 700
+              }}>
               <IonIcon icon={navigateOutline} slot="start" />
               {locationShared ? 'Location Shared ✓' : 'Share My Location'}
             </IonButton>
-
             {locationShared && (
               <div className="location-box">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <IonIcon icon={checkmarkCircleOutline} style={{ color: 'var(--primary-green)', fontSize: '20px' }} />
-                  <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--dark-green)' }}>Location Shared</span>
+                  <IonIcon icon={checkmarkCircleOutline} style={{ color: 'var(--clr-primary)', fontSize: '20px' }} />
+                  <span style={{ fontWeight: 800, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>Location Shared</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '14px', color: 'var(--soft-green)' }}>Last updated</span>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--dark-green)' }}>{locationTime}</span>
+                  <span style={{ fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)' }}>Last updated</span>
+                  <span style={{ fontSize: 'var(--font-sm)', fontWeight: 700, color: 'var(--clr-text-primary)' }}>{locationTime}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', color: 'var(--soft-green)' }}>Signal</span>
+                  <span style={{ fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)' }}>Signal</span>
                   <div>
-                    {/* Signal strength bars — UI only */}
                     {[12, 18, 24, 30].map((h, i) => (
-                      <span key={i} className={`signal-bar ${i < 3 ? 'active' : ''}`}
-                        style={{ height: `${h}px` }} />
+                      <span key={i} className={`signal-bar ${i < 3 ? 'active' : ''}`} style={{ height: `${h}px` }} />
                     ))}
-                    <span style={{ fontSize: '12px', color: 'var(--primary-green)', marginLeft: '4px' }}>Good</span>
+                    <span style={{ fontSize: 'var(--font-xs)', color: 'var(--clr-primary)', marginLeft: '4px', fontWeight: 700 }}>Good</span>
                   </div>
                 </div>
               </div>
             )}
-          </IonCardContent>
-        </IonCard>
+          </div>
+        </div>
 
       </div>
     </IonContent>
   );
 
-  // ── TAB 2: SETTINGS ───────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     TAB 2 — SETTINGS
+  ══════════════════════════════════════════════════════════ */
   const renderSettings = () => (
     <IonContent className="sn-page">
       <div className="sn-header-band">
-        <h2 style={{ margin: 0, fontWeight: 800, fontSize: '22px' }}>Settings</h2>
-        <p style={{ margin: '4px 0 0', fontSize: '14px', opacity: 0.8 }}>Manage contacts and alert preferences</p>
+        <h2 style={{ margin: 0, fontWeight: 900, fontSize: 'var(--font-xl)' }}>Settings</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 'var(--font-sm)', opacity: 0.8 }}>Manage contacts and alert preferences</p>
       </div>
 
-      <div style={{ padding: '0 16px 32px' }}>
+      <div className="tab-content" style={{ padding: '0 var(--space-md) var(--space-xl)' }}>
 
-        {/* Emergency Contacts */}
         <p className="sn-section-label">Emergency Contacts</p>
         <ContactsManager />
 
-        {/* Alert Settings */}
         <p className="sn-section-label">Alert Settings</p>
-        <IonCard className="sn-card">
-          <IonCardContent style={{ padding: '4px 16px' }}>
+        <div className="sn-card">
+          <div style={{ padding: '0 var(--space-md)' }}>
             {([
-              { key: 'smsAlerts' as const, label: 'SMS Alerts', desc: 'Send text message when SOS is triggered', iconBg: 'var(--light-green)', iconColor: 'var(--primary-green)' },
-              { key: 'locationSharing' as const, label: 'Location Sharing', desc: 'Share your location with contacts', iconBg: '#fce4ec', iconColor: '#c62828' },
+              { key: 'smsAlerts' as const,      label: 'SMS Alerts',       desc: 'Send text message when SOS is triggered', iconBg: 'var(--clr-primary-tint)', iconColor: 'var(--clr-primary)' },
+              { key: 'locationSharing' as const, label: 'Location Sharing', desc: 'Share your location with contacts',        iconBg: 'var(--clr-alert-tint)',   iconColor: 'var(--clr-alert)' },
             ]).map(item => (
               <div key={item.key} className="sn-toggle-row">
                 <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
                   <IonIcon icon={locationOutline} style={{ fontSize: '22px', color: item.iconColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: 'var(--dark-green)' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>{item.desc}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>{item.label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>{item.desc}</p>
                 </div>
-                <IonToggle
-                  checked={settings[item.key]}
-                  onIonChange={() => updateSetting(item.key, !settings[item.key])}
-                  color="success"
-                />
+                <IonToggle checked={settings[item.key]}
+                  onIonChange={() => updateSetting(item.key, !settings[item.key])} color="success" />
               </div>
             ))}
-          </IonCardContent>
-        </IonCard>
+          </div>
+        </div>
 
-        {/* Sensor Settings */}
         <p className="sn-section-label">Sensor Settings</p>
-        <IonCard className="sn-card">
-          <IonCardContent style={{ padding: '4px 16px' }}>
+        <div className="sn-card">
+          <div style={{ padding: '0 var(--space-md)' }}>
             {([
-              { key: 'fallAlert' as const, label: 'Fall Alert Sensor', desc: 'Detects sudden falls via accelerometer' },
-              { key: 'shakeAlert' as const, label: 'Shake Sensor', desc: 'Detects rapid shaking to trigger SOS' },
-              { key: 'noMovementAlert' as const, label: 'Motion Sensor', desc: 'Monitors for extended inactivity' },
+              { key: 'fallAlert' as const,       label: 'Fall Alert Sensor', desc: 'Detects sudden falls via accelerometer' },
+              { key: 'shakeAlert' as const,      label: 'Shake Sensor',      desc: 'Detects rapid shaking to trigger SOS' },
+              { key: 'noMovementAlert' as const, label: 'Motion Sensor',     desc: 'Monitors for extended inactivity' },
             ]).map(item => (
               <div key={item.key} className="sn-toggle-row">
-                <div className="sn-icon-wrap" style={{ background: 'var(--light-green)' }}>
-                  <IonIcon icon={wifiOutline} style={{ fontSize: '22px', color: 'var(--primary-green)' }} />
+                <div className="sn-icon-wrap" style={{ background: 'var(--clr-primary-tint)' }}>
+                  <IonIcon icon={wifiOutline} style={{ fontSize: '22px', color: 'var(--clr-primary)' }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '16px', color: 'var(--dark-green)' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: 'var(--soft-green)' }}>{item.desc}</p>
-                  {/* TODO: Check device.sensors availability and show real status */}
-                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#f57c00' }}>⚠ Sensor not available on this device</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>{item.label}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>{item.desc}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--clr-warning)' }}>Sensor not available on this device</p>
                 </div>
-                <IonToggle
-                  checked={settings[item.key]}
-                  onIonChange={() => updateSetting(item.key, !settings[item.key])}
-                  color="success"
-                />
+                <IonToggle checked={settings[item.key]}
+                  onIonChange={() => updateSetting(item.key, !settings[item.key])} color="success" />
               </div>
             ))}
-          </IonCardContent>
-        </IonCard>
+          </div>
+        </div>
 
-        <IonButton
-          expand="block"
+        <IonButton expand="block"
           onClick={() => { setSaveMsg('Settings saved!'); setTimeout(() => setSaveMsg(''), 2500); }}
-          style={{ '--background': 'var(--primary-green)', '--border-radius': '14px', height: '52px', fontSize: '17px', fontWeight: 700 }}
-        >
+          style={{ '--background': 'var(--clr-primary)', '--border-radius': 'var(--radius-md)', '--box-shadow': 'var(--shadow-md)', height: '54px', fontSize: 'var(--font-md)', fontWeight: 800 }}>
           <IonIcon icon={checkmarkCircleOutline} slot="start" />
           Save Settings
         </IonButton>
         {saveMsg && (
           <IonText color="success">
-            <p style={{ textAlign: 'center', marginTop: '10px', fontWeight: 700, fontSize: '16px' }}>✓ {saveMsg}</p>
+            <p style={{ textAlign: 'center', marginTop: 'var(--space-sm)', fontWeight: 700, fontSize: 'var(--font-md)' }}>
+              ✓ {saveMsg}
+            </p>
           </IonText>
         )}
       </div>
     </IonContent>
   );
 
-  // ── TAB 3: PROFILE ────────────────────────────────────────────
+  /* ══════════════════════════════════════════════════════════
+     TAB 3 — PROFILE
+  ══════════════════════════════════════════════════════════ */
   const renderProfile = () => (
     <IonContent className="sn-page">
-      <div className="sn-header-band" style={{ textAlign: 'center', paddingBottom: '32px' }}>
+      <div className="sn-header-band" style={{ textAlign: 'center', paddingBottom: 'var(--space-xl)' }}>
         <div className="sn-avatar">{userProfile.displayName.charAt(0).toUpperCase() || '?'}</div>
         {editingName ? (
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
             <input value={tempName} onChange={e => setTempName(e.target.value)} autoFocus
               onKeyDown={e => e.key === 'Enter' && saveDisplayName()}
-              style={{ padding: '8px 14px', borderRadius: '10px', border: 'none', fontSize: '17px', width: '170px' }} />
+              style={{ padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: 'none', fontSize: 'var(--font-lg)', width: '170px', fontWeight: 700 }} />
             <button onClick={saveDisplayName}
-              style={{ background: 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '8px', padding: '8px 12px', color: 'white', cursor: 'pointer', fontSize: '18px' }}>✓</button>
+              style={{ background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 'var(--radius-sm)', padding: '8px 14px', color: 'white', cursor: 'pointer', fontSize: '20px' }}>✓</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-            <h2 style={{ color: 'white', margin: 0, fontWeight: 800, fontSize: '22px' }}>{userProfile.displayName}</h2>
+            <h2 style={{ color: 'white', margin: 0, fontWeight: 900, fontSize: 'var(--font-xl)' }}>{userProfile.displayName}</h2>
             <button onClick={() => { setTempName(userProfile.displayName); setEditingName(true); }}
-              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '5px 9px', cursor: 'pointer' }}>
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--radius-sm)', padding: '5px 9px', cursor: 'pointer' }}>
               <IonIcon icon={pencilOutline} style={{ color: 'white', fontSize: '16px' }} />
             </button>
           </div>
         )}
-        <p style={{ color: 'rgba(255,255,255,0.75)', margin: '6px 0 0', fontSize: '14px' }}>SafeNode Member</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', margin: '6px 0 0', fontSize: 'var(--font-sm)' }}>SafeNode Member</p>
       </div>
 
-      <div style={{ padding: '0 16px 32px' }}>
+      <div className="tab-content" style={{ padding: '0 var(--space-md) var(--space-xl)' }}>
         <p className="sn-section-label">Your Details</p>
-        <IonCard className="sn-card">
-          <IonCardContent style={{ padding: '4px 0' }}>
-            <IonList lines="inset">
-              <IonItem style={{ '--background': 'transparent' }}>
-                <IonIcon icon={callOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
-                <IonLabel>
-                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Phone Number</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--dark-green)' }}>{userProfile.contact}</h3>
-                </IonLabel>
-              </IonItem>
-              <IonItem style={{ '--background': 'transparent' }}>
-                <IonIcon icon={mailOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
-                <IonLabel>
-                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Email</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--dark-green)' }}>{userProfile.email}</h3>
-                </IonLabel>
-              </IonItem>
-              <IonItem lines="none" style={{ '--background': 'transparent' }}>
-                <IonIcon icon={shieldCheckmarkOutline} slot="start" style={{ color: 'var(--primary-green)', fontSize: '22px' }} />
-                <IonLabel>
-                  <p style={{ fontSize: '13px', color: 'var(--soft-green)', margin: '0 0 2px' }}>Account Status</p>
-                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--primary-green)' }}>✓ Verified & Protected</h3>
-                </IonLabel>
-              </IonItem>
-            </IonList>
-          </IonCardContent>
-        </IonCard>
+        <div className="sn-card">
+          <IonList lines="inset" style={{ background: 'transparent' }}>
+            <IonItem style={{ '--background': 'transparent' }}>
+              <IonIcon icon={callOutline} slot="start" style={{ color: 'var(--clr-primary)', fontSize: '22px' }} />
+              <IonLabel>
+                <p style={{ fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Phone</p>
+                <h3 style={{ fontSize: 'var(--font-md)', fontWeight: 800, color: 'var(--clr-text-primary)' }}>{userProfile.contact}</h3>
+              </IonLabel>
+            </IonItem>
+            <IonItem style={{ '--background': 'transparent' }}>
+              <IonIcon icon={mailOutline} slot="start" style={{ color: 'var(--clr-primary)', fontSize: '22px' }} />
+              <IonLabel>
+                <p style={{ fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Email</p>
+                <h3 style={{ fontSize: 'var(--font-md)', fontWeight: 800, color: 'var(--clr-text-primary)' }}>{userProfile.email}</h3>
+              </IonLabel>
+            </IonItem>
+            <IonItem lines="none" style={{ '--background': 'transparent' }}>
+              <IonIcon icon={shieldCheckmarkOutline} slot="start" style={{ color: 'var(--clr-primary)', fontSize: '22px' }} />
+              <IonLabel>
+                <p style={{ fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Status</p>
+                <h3 style={{ fontSize: 'var(--font-md)', fontWeight: 800, color: 'var(--clr-primary)' }}>✓ Verified & Protected</h3>
+              </IonLabel>
+            </IonItem>
+          </IonList>
+        </div>
 
-        <IonButton
-          expand="block"
-          color="danger"
-          fill="outline"
+        <IonButton expand="block" color="danger" fill="outline"
           onClick={() => setShowLogoutAlert(true)}
-          style={{ '--border-radius': '14px', height: '52px', fontSize: '17px', fontWeight: 700, marginTop: '12px' }}
-        >
+          style={{ '--border-radius': 'var(--radius-md)', height: '54px', fontSize: 'var(--font-md)', fontWeight: 800, marginTop: 'var(--space-sm)' }}>
           <IonIcon icon={logOutOutline} slot="start" />
           Sign Out
         </IonButton>
@@ -384,12 +395,13 @@ const Dashboard: React.FC = () => {
     </IonContent>
   );
 
+  /* ── Shell ── */
   return (
     <IonPage>
       <style>{styles}</style>
       <IonHeader>
         <IonToolbar color="primary">
-          <IonTitle style={{ fontWeight: 800, fontSize: '20px' }}>🛡️ SafeNode</IonTitle>
+          <IonTitle style={{ fontWeight: 900, fontSize: 'var(--font-lg)' }}>🛡️ SafeNode</IonTitle>
         </IonToolbar>
       </IonHeader>
 

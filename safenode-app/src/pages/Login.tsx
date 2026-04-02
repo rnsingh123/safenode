@@ -1,335 +1,254 @@
 /**
- * ============================================================================
- * LOGIN.TSX - User Authentication Page
- * ============================================================================
- * Purpose: Handles user authentication via OTP or Password methods
- * 
- * Features:
- * - Dual authentication methods (OTP and Password)
- * - OTP input with auto-focus and backspace navigation
- * - Form validation with error messages
- * - Loading state with animated indicator
- * - Session storage integration
- * 
- * State Variables:
- * - contact: Phone number input
- * - otp: 6-digit OTP array
- * - password: Password field
- * - error: Error message display
- * - loading: Loading animation state
- * - loginMethod: 'otp' or 'password' toggle
- * 
- * Debug Tips:
- * - Check sessionStorage in DevTools to verify user data storage
- * - OTP navigation handled via keyboard events (ArrowLeft, ArrowRight, Backspace)
- * - Loading delay is 1500ms - adjust in handleLogin() if needed
- * ============================================================================
+ * Login.tsx — Authentication screen
+ * Logic: unchanged. UI: redesigned with new token system.
+ * ── EDIT GUIDE ──────────────────────────────────────────────
+ *  Colors  → src/theme/variables.css
+ *  Layout  → .login-wrap padding / .login-card styles below
+ *  Animations → @keyframes dotPulse / fadeSlideUp
+ * ────────────────────────────────────────────────────────────
  */
 
 import React, { useState } from 'react';
-import {
-  IonPage, IonContent, IonInput, IonItem,
-  IonButton, IonText
-} from '@ionic/react';
+import { IonPage, IonContent, IonInput, IonItem, IonButton, IonText } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 
+/* ── [ANIMATION AREA] ── keep lightweight, CSS only ── */
 const styles = `
-  @keyframes dotPulse {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-    40% { transform: scale(1); opacity: 1; }
+  /* Fade + slide up — page entry */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
+  /* Loading dots */
+  @keyframes dotPulse {
+    0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
+    40%           { transform: scale(1);    opacity: 1; }
+  }
+
+  /* ── Page ── */
+  .login-wrap {
+    background: var(--clr-bg);
+    min-height: 100%;
+    padding: 0 var(--space-lg) 48px;
+    animation: fadeSlideUp 0.4s ease both;
+  }
+
+  /* ── Logo circle ── */
+  .login-logo {
+    width: 88px; height: 88px; border-radius: 50%;
+    background: linear-gradient(145deg, var(--clr-primary-light), var(--clr-primary));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; margin: 0 auto var(--space-md);
+    box-shadow: 0 6px 24px rgba(46,125,50,0.30);
+  }
+
+  /* ── Method toggle buttons ── */
+  .method-btn {
+    flex: 1; padding: 13px 0;
+    border: 2px solid var(--clr-primary-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-md); font-weight: 700;
+    cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s;
+    background: var(--clr-surface);
+    color: var(--clr-primary);
+  }
+  .method-btn.active {
+    background: var(--clr-primary);
+    color: #fff;
+    border-color: var(--clr-primary);
+  }
+
+  /* ── OTP boxes ── */
+  .otp-box {
+    width: 48px; height: 58px; font-size: 26px; font-weight: 800;
+    text-align: center;
+    border: 2px solid var(--clr-primary-border);
+    border-radius: var(--radius-sm);
+    background: var(--clr-surface);
+    color: var(--clr-text-primary);
+    outline: none; transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .otp-box:focus {
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 0 3px rgba(46,125,50,0.15);
+  }
+
+  /* ── Loading dots ── */
   .loading-dot {
     display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    background-color: var(--primary-green); margin: 0 5px;
+    background: var(--clr-primary); margin: 0 5px;
     animation: dotPulse 1.2s infinite ease-in-out;
   }
   .loading-dot:nth-child(2) { animation-delay: 0.2s; }
   .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-  .login-page { background: var(--app-bg); min-height: 100%; }
-  .method-btn {
-    padding: 12px 28px; border: 2px solid var(--primary-green); border-radius: 10px;
-    cursor: pointer; font-size: 16px; font-weight: 700; transition: all 0.2s;
+
+  /* ── Input item overrides ── */
+  .login-wrap ion-item {
+    --background: var(--clr-surface);
+    --border-radius: var(--radius-sm);
+    --border-color: var(--clr-primary-border);
+    --highlight-color-focused: var(--clr-primary);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-sm);
   }
-  .method-btn.active  { background: var(--primary-green); color: white; }
-  .method-btn.inactive { background: white; color: var(--primary-green); }
-  .otp-box {
-    width: 48px; height: 56px; font-size: 24px; font-weight: 700;
-    text-align: center; border: 2px solid var(--border-green); border-radius: 12px;
-    outline: none; background: white; color: var(--dark-green); transition: border-color 0.2s;
-  }
-  .otp-box:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(61,139,55,0.15); }
-  ion-item { --background: white; --border-radius: 12px; margin-bottom: 12px; }
-  ion-input { font-size: 17px; }
 `;
 
-/**
- * Login Component
- * 
- * Flow:
- * 1. User enters phone number
- * 2. User selects authentication method (OTP or Password)
- * 3. User enters credentials
- * 4. Form validation
- * 5. Simulated API call (1.5s delay)
- * 6. Store user data in sessionStorage
- * 7. Navigate to /dashboard
- */
 const Login: React.FC = () => {
-  // ===== ROUTER =====
   const history = useHistory();
-  
-  // ===== STATE MANAGEMENT =====
-  const [contact, setContact] = useState('');                      // Phone number input
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);         // 6-digit OTP array
-  const [password, setPassword] = useState('');                    // Password input
-  const [error, setError] = useState('');                          // Error message
-  const [loading, setLoading] = useState(false);                   // Loading state
-  const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp'); // Auth method toggle
+  const [contact, setContact]         = useState('');
+  const [otp, setOtp]                 = useState(['', '', '', '', '', '']);
+  const [password, setPassword]       = useState('');
+  const [error, setError]             = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
 
-  /**
-   * Handle OTP digit input with validation and auto-focus
-   * 
-   * @param index - Position in OTP array (0-5)
-   * @param value - Input value from user
-   */
   const handleOtpInput = (index: number, value: string) => {
-    // Allow only single digit
     if (value.length > 1 || !/^\d*$/.test(value)) return;
-    
-    // Update OTP array with new digit
-    const n = [...otp];
-    n[index] = value;
-    setOtp(n);
-    
-    // Auto-focus to next OTP box when digit is entered
+    const n = [...otp]; n[index] = value; setOtp(n);
     if (value && index < 5)
       (document.getElementById(`otp-${index + 1}`) as HTMLInputElement)?.focus();
   };
 
-  /**
-   * Handle special keys (Backspace, Arrow keys) for OTP navigation
-   * 
-   * @param index - Current OTP box position
-   * @param e - Keyboard event
-   */
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Backspace: Clear current or previous box
     if (e.key === 'Backspace') {
       e.preventDefault();
       const n = [...otp];
-      if (otp[index]) {
-        // Clear current box
-        n[index] = '';
-        setOtp(n);
-      } else if (index > 0) {
-        // If empty, clear previous and move focus
-        n[index - 1] = '';
-        setOtp(n);
+      if (otp[index]) { n[index] = ''; setOtp(n); }
+      else if (index > 0) {
+        n[index - 1] = ''; setOtp(n);
         (document.getElementById(`otp-${index - 1}`) as HTMLInputElement)?.focus();
       }
-    }
-    // Arrow Left: Move focus to previous box
-    else if (e.key === 'ArrowLeft' && index > 0)
+    } else if (e.key === 'ArrowLeft' && index > 0)
       (document.getElementById(`otp-${index - 1}`) as HTMLInputElement)?.focus();
-    // Arrow Right: Move focus to next box
     else if (e.key === 'ArrowRight' && index < 5)
       (document.getElementById(`otp-${index + 1}`) as HTMLInputElement)?.focus();
   };
 
-  /**
-   * Main login handler - validates input and authenticates user
-   */
+  /* ── [AUTH LOGIC — do not edit] ── */
   const handleLogin = () => {
-    // ===== VALIDATION CHECKS =====
-    
-    // Check 1: Phone number is required
-    if (!contact) {
-      setError('Please enter your phone number');
-      return;
-    }
-    
-    // Check 2: Phone number must be at least 10 digits
-    if (contact.length < 10) {
-      setError('Enter a valid 10-digit number');
-      return;
-    }
-    
-    // Check 3: Validate OTP method
-    if (loginMethod === 'otp' && otp.join('').length !== 6) {
-      setError('Please enter all 6 digits');
-      return;
-    }
-    
-    // Check 4: Validate password method
-    if (loginMethod === 'password' && !password) {
-      setError('Please enter your password');
-      return;
-    }
-    
-    // ===== AUTHENTICATION FLOW =====
-    setError('');
-    setLoading(true);
-    
-    // Simulate API call with 1.5 second delay
-    // Replace this with actual API endpoint in production
+    if (!contact)                                          { setError('Please enter your phone number'); return; }
+    if (contact.length < 10)                               { setError('Enter a valid 10-digit number'); return; }
+    if (loginMethod === 'otp' && otp.join('').length !== 6){ setError('Please enter all 6 digits'); return; }
+    if (loginMethod === 'password' && !password)           { setError('Please enter your password'); return; }
+    setError(''); setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      
-      // Store user profile in sessionStorage
-      // This persists across page navigation until session ends
       sessionStorage.setItem('user', JSON.stringify({
-        username: `user_${contact.slice(-4)}`,    // Username from last 4 digits
-        displayName: `User ${contact.slice(-4)}`, // Display name
-        contact,                                   // Phone number
-        email: `user${contact.slice(-4)}@safenode.app` // Generated email
+        username:    `user_${contact.slice(-4)}`,
+        displayName: `User ${contact.slice(-4)}`,
+        contact,
+        email:       `user${contact.slice(-4)}@safenode.app`
       }));
-      
-      // Debug log
-      console.log('[LOGIN] User authenticated | Method:', loginMethod, '| Contact:', contact);
-      
-      // Navigate to dashboard
+      console.log('[LOGIN] authenticated | method:', loginMethod);
       history.push('/dashboard');
     }, 1500);
   };
 
   return (
     <IonPage>
-      {/* Inject animation styles */}
       <style>{styles}</style>
       <IonContent>
-        <div className="login-page" style={{ padding: '0 24px 40px' }}>
+        <div className="login-wrap">
 
-          {/* ===== HEADER SECTION ===== */}
-          <div style={{ textAlign: 'center', paddingTop: '70px', paddingBottom: '36px' }}>
-            {/* Logo with gradient background */}
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--mid-green), var(--dark-green))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px', fontSize: '36px',
-              boxShadow: '0 4px 16px rgba(61,139,55,0.3)'
-            }}>🛡️</div>
-            
-            {/* App title */}
-            <h1 style={{ margin: 0, fontWeight: 800, fontSize: '30px', color: 'var(--dark-green)' }}>SafeNode</h1>
-            
-            {/* Tagline */}
-            <p style={{ color: 'var(--soft-green)', margin: '6px 0 0', fontSize: '16px' }}>Your personal safety companion</p>
+          {/* ── [HEADER] ── logo + title ── */}
+          <div style={{ textAlign: 'center', paddingTop: '64px', paddingBottom: '36px' }}>
+            <div className="login-logo">🛡️</div>
+            <h1 style={{ margin: 0, fontWeight: 800, fontSize: 'var(--font-hero)', color: 'var(--clr-text-primary)', letterSpacing: '-0.5px' }}>
+              SafeNode
+            </h1>
+            <p style={{ color: 'var(--clr-text-secondary)', margin: '6px 0 0', fontSize: 'var(--font-md)' }}>
+              Your personal safety companion
+            </p>
           </div>
 
-          {/* ===== PHONE NUMBER INPUT ===== */}
-          <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--primary-green)', margin: '0 0 8px' }}>Phone Number</p>
-          <IonItem style={{ '--background': 'white', '--border-radius': '12px', '--border-color': 'var(--border-green)', marginBottom: '20px' }}>
+          {/* ── [INPUT] phone number ── */}
+          <p style={{ fontWeight: 700, fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Phone Number
+          </p>
+          <IonItem>
             <IonInput
               type="tel"
               value={contact}
               onIonChange={e => setContact(e.detail.value!)}
               placeholder="Enter your phone number"
-              style={{ fontSize: '17px' }}
+              style={{ fontSize: 'var(--font-lg)', fontWeight: 600 }}
             />
           </IonItem>
 
-          {/* ===== AUTHENTICATION METHOD SELECTOR ===== */}
-          <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--primary-green)', margin: '0 0 10px', textAlign: 'center' }}>
-            How do you want to sign in?
+          {/* ── [METHOD TOGGLE] ── */}
+          <p style={{ fontWeight: 700, fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)', margin: 'var(--space-lg) 0 var(--space-sm)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Sign in with
           </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
-            {/* OTP Method Button */}
-            <button
-              className={`method-btn ${loginMethod === 'otp' ? 'active' : 'inactive'}`}
-              onClick={() => setLoginMethod('otp')}
-            >
-              One-Time Code
-            </button>
-            
-            {/* Password Method Button */}
-            <button
-              className={`method-btn ${loginMethod === 'password' ? 'active' : 'inactive'}`}
-              onClick={() => setLoginMethod('password')}
-            >
-              Password
-            </button>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
+            <button className={`method-btn ${loginMethod === 'otp' ? 'active' : ''}`}
+              onClick={() => setLoginMethod('otp')}>One-Time Code</button>
+            <button className={`method-btn ${loginMethod === 'password' ? 'active' : ''}`}
+              onClick={() => setLoginMethod('password')}>Password</button>
           </div>
 
-          {/* ===== OTP INPUT SECTION ===== */}
+          {/* ── [OTP INPUT] ── */}
           {loginMethod === 'otp' ? (
-            <div style={{ marginBottom: '20px' }}>
-              <p style={{ textAlign: 'center', color: 'var(--soft-green)', marginBottom: '14px', fontSize: '15px' }}>
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <p style={{ textAlign: 'center', color: 'var(--clr-text-secondary)', marginBottom: 'var(--space-md)', fontSize: 'var(--font-sm)' }}>
                 Enter the 6-digit code sent to you
               </p>
-              {/* OTP Input Boxes */}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    id={`otp-${i}`}           // ID for DOM reference and focus
-                    type="text"              // Text type for styling control
-                    inputMode="numeric"      // Mobile keyboard: show numbers only
-                    maxLength={1}             // Restrict to single character
-                    value={digit}
+                  <input key={i} id={`otp-${i}`} type="text" inputMode="numeric"
+                    maxLength={1} value={digit} className="otp-box" placeholder="·"
+                    autoFocus={i === 0}
                     onChange={e => handleOtpInput(i, e.currentTarget.value)}
-                    onKeyDown={e => handleOtpKeyDown(i, e)}
-                    autoFocus={i === 0}       // Focus first box on load
-                    className="otp-box"
-                    placeholder="·"
-                  />
+                    onKeyDown={e => handleOtpKeyDown(i, e)} />
                 ))}
               </div>
             </div>
           ) : (
-            // ===== PASSWORD INPUT SECTION =====
-            <div style={{ marginBottom: '20px' }}>
-              <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--primary-green)', margin: '0 0 8px' }}>Password</p>
-              <IonItem style={{ '--background': 'white', '--border-radius': '12px', '--border-color': 'var(--border-green)' }}>
-                <IonInput
-                  type="password"
-                  value={password}
+            /* ── [PASSWORD INPUT] ── */
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <p style={{ fontWeight: 700, fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Password
+              </p>
+              <IonItem>
+                <IonInput type="password" value={password}
                   onIonChange={e => setPassword(e.detail.value!)}
                   placeholder="Enter your password"
-                  style={{ fontSize: '17px' }}
-                />
+                  style={{ fontSize: 'var(--font-lg)', fontWeight: 600 }} />
               </IonItem>
             </div>
           )}
 
-          {/* ===== ERROR MESSAGE DISPLAY ===== */}
+          {/* ── [ERROR] ── */}
           {error && (
             <IonText color="danger">
-              <p style={{ textAlign: 'center', fontSize: '15px', margin: '0 0 12px', fontWeight: 600 }}>⚠ {error}</p>
+              <p style={{ textAlign: 'center', fontSize: 'var(--font-sm)', margin: '0 0 var(--space-sm)', fontWeight: 600 }}>
+                ⚠ {error}
+              </p>
             </IonText>
           )}
 
-          {/* ===== LOADING INDICATOR ===== */}
+          {/* ── [LOADING] ── */}
           {loading && (
-            <div style={{ textAlign: 'center', margin: '16px 0' }}>
-              <div className="loading-dot" />
-              <div className="loading-dot" />
-              <div className="loading-dot" />
+            <div style={{ textAlign: 'center', margin: 'var(--space-md) 0' }}>
+              <div className="loading-dot" /><div className="loading-dot" /><div className="loading-dot" />
             </div>
           )}
 
-          {/* ===== LOGIN BUTTON ===== */}
-          <IonButton
-            expand="block"
-            onClick={handleLogin}
-            disabled={loading}
+          {/* ── [SIGN IN BUTTON] ── */}
+          <IonButton expand="block" onClick={handleLogin} disabled={loading}
             style={{
-              '--background': 'var(--primary-green)',
-              '--background-hover': 'var(--dark-green)',
-              '--background-focused': 'var(--dark-green)',
-              '--border-radius': '14px',
-              height: '54px',
-              fontSize: '18px',
-              fontWeight: 700,
-              marginTop: '8px'
-            }}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
+              '--background':        'var(--clr-primary)',
+              '--background-hover':  'var(--clr-primary-light)',
+              '--border-radius':     'var(--radius-md)',
+              '--box-shadow':        'var(--shadow-md)',
+              height: '56px', fontSize: 'var(--font-lg)', fontWeight: 800,
+              marginTop: 'var(--space-sm)', letterSpacing: '0.3px'
+            }}>
+            {loading ? 'Signing in…' : 'Sign In'}
           </IonButton>
 
-          {/* ===== DISCLAIMER ===== */}
-          <p style={{ textAlign: 'center', color: '#888', fontSize: '13px', marginTop: '20px' }}>
-            By signing in, you agree to SafeNode's safety terms.
+          <p style={{ textAlign: 'center', color: 'var(--clr-text-muted)', fontSize: 'var(--font-xs)', marginTop: 'var(--space-lg)' }}>
+            By signing in you agree to SafeNode's safety terms.
           </p>
         </div>
       </IonContent>

@@ -1,35 +1,83 @@
-/* SafeNode Theme Variables */
+/* ============================================================
+   SafeNode — Design Tokens
+   Edit colors here to retheme the entire app.
+   ============================================================ */
 :root {
-  /* 🌿 Brand Colors */
-  --primary-green:  #3d8b37;
-  --dark-green:     #1b5e20;
-  --light-green:    #e8f5e9;
-  --mid-green:      #66bb6a;
-  --soft-green:     #558b2f;
-  --border-green:   #a5d6a7;
+  /* ── Primary palette ── */
+  --clr-primary:        #2e7d32;   /* Main green — buttons, headers    */
+  --clr-primary-light:  #43a047;   /* Lighter green — gradients, hover */
+  --clr-primary-tint:   #e8f5e9;   /* Very light green — backgrounds   */
+  --clr-primary-border: #a5d6a7;   /* Subtle green border              */
+  --clr-primary-muted:  #558b2f;   /* Muted green — secondary text     */
 
-  /* 🌿 Background */
-  --app-bg: #f1f8f1;
+  /* ── Alert / SOS — keep RED only for danger ── */
+  --clr-alert:          #c62828;
+  --clr-alert-light:    #ef5350;
+  --clr-alert-tint:     #fce4ec;
 
-  /* 🌿 Text */
-  --text-primary:   #1b5e20;
-  --text-secondary: #558b2f;
+  /* ── Status colors ── */
+  --clr-success:        #2e7d32;
+  --clr-warning:        #e65100;
+  --clr-warning-tint:   #fff3e0;
+  --clr-neutral:        #757575;
 
-  /* Ionic overrides */
-  --ion-color-primary:           #3d8b37;
-  --ion-color-primary-rgb:       61,139,55;
+  /* ── Surfaces ── */
+  --clr-bg:             #f4f9f4;   /* Page background                  */
+  --clr-surface:        #ffffff;   /* Card / input background          */
+  --clr-surface-raised: #ffffff;   /* Elevated card                    */
+
+  /* ── Text ── */
+  --clr-text-primary:   #1b2e1c;   /* High contrast body text          */
+  --clr-text-secondary: #4a6741;   /* Secondary / label text           */
+  --clr-text-muted:     #8a9e8b;   /* Placeholder / hint text          */
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.12);
+
+  /* ── Radius ── */
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  22px;
+  --radius-xl:  32px;
+
+  /* ── Spacing scale ── */
+  --space-xs:   4px;
+  --space-sm:   8px;
+  --space-md:   16px;
+  --space-lg:   24px;
+  --space-xl:   32px;
+
+  /* ── Typography ── */
+  --font-xs:    12px;
+  --font-sm:    14px;
+  --font-md:    16px;
+  --font-lg:    20px;
+  --font-xl:    26px;
+  --font-hero:  32px;
+
+  /* ── Ionic overrides (maps to tokens above) ── */
+  --ion-color-primary:           var(--clr-primary);
+  --ion-color-primary-rgb:       46,125,50;
   --ion-color-primary-contrast:  #ffffff;
-  --ion-color-primary-shade:     #2e7d32;
-  --ion-color-primary-tint:      #66bb6a;
-
-  --ion-background-color:        #f1f8f1;
-  --ion-text-color:              #1b5e20;
-  --ion-border-color:            #a5d6a7;
-  --ion-item-background:         #ffffff;
-  --ion-toolbar-background:      #3d8b37;
+  --ion-color-primary-shade:     #1b5e20;
+  --ion-color-primary-tint:      #43a047;
+  --ion-background-color:        var(--clr-bg);
+  --ion-text-color:              var(--clr-text-primary);
+  --ion-border-color:            var(--clr-primary-border);
+  --ion-item-background:         var(--clr-surface);
+  --ion-toolbar-background:      var(--clr-primary);
   --ion-toolbar-color:           #ffffff;
-  --ion-tab-bar-background:      #ffffff;
-  --ion-tab-bar-border-color:    #a5d6a7;
-  --ion-color-step-50:           #f1f8f1;
-  --ion-color-step-100:          #e8f5e9;
+  --ion-tab-bar-background:      var(--clr-surface);
+  --ion-tab-bar-border-color:    var(--clr-primary-border);
+
+  /* Legacy aliases — keeps older code working */
+  --primary-green:  var(--clr-primary);
+  --dark-green:     #1b5e20;
+  --light-green:    var(--clr-primary-tint);
+  --mid-green:      var(--clr-primary-light);
+  --soft-green:     var(--clr-primary-muted);
+  --border-green:   var(--clr-primary-border);
+  --app-bg:         var(--clr-bg);
 }
