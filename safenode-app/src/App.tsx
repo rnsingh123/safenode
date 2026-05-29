@@ -26,6 +26,8 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Register from './pages/Register';
+import { getUserIdentity } from './pages/Register';
 
 // ===== IONIC CORE CSS =====
 // These CSS files are required for Ionic components to function properly
@@ -67,15 +69,18 @@ const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
       <IonRouterOutlet>
-        {/* Login Route - First page users see */}
+        {/* Register Route - First-time setup (shown once) */}
+        <Route exact path="/register" component={Register} />
+
+        {/* Login Route */}
         <Route exact path="/login" component={Login} />
         
         {/* Dashboard Route - Main app after authentication */}
         <Route exact path="/dashboard" component={Dashboard} />
         
-        {/* Default Route - Redirect to login */}
+        {/* Default Route - Go to register if first time, else login */}
         <Route exact path="/">
-          <Redirect to="/login" />
+          <Redirect to={getUserIdentity() ? '/login' : '/register'} />
         </Route>
       </IonRouterOutlet>
     </IonReactRouter>
