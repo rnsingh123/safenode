@@ -1,7 +1,10 @@
 /**
- * ContactsManager.tsx — Add / remove / OTP-verify emergency contacts
- * Logic: unchanged. UI: redesigned with card system.
- * TODO: replace OTP simulation with real SMS API
+ * ContactsManager.tsx — Emergency contacts connected to backend API
+ *
+ * Uses /api/contacts endpoints — contacts stored in MongoDB.
+ * Falls back to localStorage if backend is unavailable (offline mode).
+ *
+ * Backend auto-verifies contacts on add (no OTP needed for demo).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,9 +14,14 @@ import {
 } from '@ionic/react';
 import {
   personAddOutline, trashOutline, checkmarkCircleOutline,
-  refreshOutline, callOutline, shieldCheckmarkOutline
+  callOutline, shieldCheckmarkOutline, refreshOutline
 } from 'ionicons/icons';
-import { Contact, getContacts, addContact, removeContact, verifyContact } from '../../utils/storage';
+import {
+  apiGetContacts, apiAddContact, apiDeleteContact, getToken
+} from '../../services/api';
+import {
+  getContacts, addContact, removeContact, Contact
+} from '../../utils/storage';
 
 const styles = `
   @keyframes fadeIn {
@@ -26,19 +34,15 @@ const styles = `
     display: flex; align-items: center; gap: 10px;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
-
-  /* Contact row — flex with overflow protection */
   .cm-contact-row {
     display: flex; align-items: flex-start;
     gap: var(--space-sm);
     padding: var(--space-md) 0;
     border-bottom: 1px solid var(--clr-primary-tint);
     animation: fadeIn 0.3s ease both;
-    min-width: 0; /* prevent flex overflow */
+    min-width: 0;
   }
   .cm-contact-row:last-child { border-bottom: none; }
-
-  /* Avatar — fixed size, never shrinks */
   .cm-avatar {
     width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
     background: linear-gradient(135deg, var(--clr-primary-light), var(--clr-primary));
@@ -46,21 +50,13 @@ const styles = `
     font-size: 18px; font-weight: 800; color: white;
     box-shadow: 0 2px 8px rgba(46,125,50,0.25);
   }
-
-  /* Text column — takes remaining space, clips overflow */
   .cm-contact-info {
-    flex: 1;
-    min-width: 0; /* critical — allows text to truncate */
-    overflow: hidden;
+    flex: 1; min-width: 0; overflow: hidden;
   }
   .cm-contact-info p {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin: 0;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; margin: 0;
   }
-
-  /* Badges */
   .badge-verified {
     display: inline-flex; align-items: center; gap: 3px;
     font-size: var(--font-xs); font-weight: 700;
@@ -75,25 +71,6 @@ const styles = `
     border-radius: 20px; padding: 2px 8px; margin-top: 4px;
     white-space: nowrap;
   }
-
-  /* OTP row — stacks on very small screens */
-  .otp-row {
-    display: flex; gap: 6px; margin-top: 8px; align-items: center;
-    flex-wrap: nowrap; /* keep on one line */
-    min-width: 0;
-  }
-  .otp-mini {
-    flex: 1; min-width: 0; /* shrink if needed */
-    padding: 8px 10px;
-    border: 2px solid var(--clr-primary-border);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-sm); outline: none;
-    color: var(--clr-text-primary); background: var(--clr-surface);
-    transition: border-color 0.18s;
-  }
-  .otp-mini:focus { border-color: var(--clr-primary); }
-
-  /* Delete button — fixed size, never shrinks */
   .cm-delete-btn {
     background: var(--clr-alert-tint); border: none;
     border-radius: var(--radius-sm);
@@ -104,66 +81,126 @@ const styles = `
     transition: transform 0.1s, background 0.15s;
   }
   .cm-delete-btn:active { transform: scale(0.93); background: #f8bbd0; }
-
-  /* Empty state */
   .cm-empty {
     text-align: center;
     padding: var(--space-xl) var(--space-md);
     color: var(--clr-text-muted);
   }
+  .cm-mode-badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 10px;
+    font-weight: 700; margin-bottom: var(--space-sm);
+    display: inline-block;
+  }
+  .cm-mode-online  { background: var(--clr-primary-tint); color: var(--clr-primary); }
+  .cm-mode-offline { background: var(--clr-warning-tint); color: var(--clr-warning); }
 `;
 
+// Unified contact shape for display
+interface DisplayContact {
+  id: string;
+  name: string;
+  phone: string;
+  verified: boolean;
+  source: 'backend' | 'local';
+}
+
 const ContactsManager: React.FC = () => {
-  const [contacts, setContacts]     = useState<Contact[]>([]);
-  const [newName, setNewName]       = useState('');
-  const [newPhone, setNewPhone]     = useState('');
-  const [addError, setAddError]     = useState('');
-  const [otpInputs, setOtpInputs]   = useState<Record<string, string>>({});
-  const [pendingOtp, setPendingOtp] = useState<Record<string, string>>({});
-  const [showToast, setShowToast]   = useState(false);
-  const [toastMsg, setToastMsg]     = useState('');
-  const [deleteId, setDeleteId]     = useState<string | null>(null);
+  const [contacts, setContacts]   = useState<DisplayContact[]>([]);
+  const [newName, setNewName]     = useState('');
+  const [newPhone, setNewPhone]   = useState('');
+  const [addError, setAddError]   = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg]   = useState('');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('success');
+  const [deleteId, setDeleteId]   = useState<string | null>(null);
+  const [isOnline, setIsOnline]   = useState(false); // true if backend is reachable
 
-  useEffect(() => { setContacts(getContacts()); }, []);
-  const refresh = () => setContacts(getContacts());
+  // Load contacts — try backend first, fall back to localStorage
+  const loadContacts = async () => {
+    const token = getToken();
+    if (token) {
+      try {
+        const data = await apiGetContacts();
+        // Backend returns array of contact objects
+        const mapped: DisplayContact[] = data.map((c: any) => ({
+          id:       c._id || c.id,
+          name:     c.name,
+          phone:    c.phone,
+          verified: c.verified,
+          source:   'backend' as const,
+        }));
+        setContacts(mapped);
+        setIsOnline(true);
+        return;
+      } catch {
+        // Backend unreachable — fall through to localStorage
+      }
+    }
+    // Offline fallback
+    const local = getContacts();
+    setContacts(local.map(c => ({ ...c, source: 'local' as const })));
+    setIsOnline(false);
+  };
 
-  const handleAdd = () => {
+  useEffect(() => { loadContacts(); }, []);
+
+  const handleAdd = async () => {
     if (!newName.trim())             { setAddError('Please enter a name'); return; }
     if (newPhone.trim().length < 10) { setAddError('Enter a valid phone number'); return; }
     setAddError('');
-    const contact = addContact(newName, newPhone);
-    refresh(); setNewName(''); setNewPhone('');
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setPendingOtp(prev => ({ ...prev, [contact.id]: otp }));
-    console.log('[OTP] demo code for', contact.name, ':', otp);
-    setToastMsg('OTP sent — check console for demo code');
-    setShowToast(true);
+    setLoading(true);
+
+    const token = getToken();
+    if (token && isOnline) {
+      // Add to backend
+      try {
+        await apiAddContact(newName.trim(), newPhone.trim());
+        setNewName(''); setNewPhone('');
+        await loadContacts();
+        setToastMsg('Contact added ✓'); setToastColor('success'); setShowToast(true);
+      } catch (err: any) {
+        setAddError(err.message || 'Failed to add contact');
+      }
+    } else {
+      // Offline — add to localStorage
+      addContact(newName.trim(), newPhone.trim());
+      setNewName(''); setNewPhone('');
+      await loadContacts();
+      setToastMsg('Contact saved locally (offline mode)');
+      setToastColor('warning'); setShowToast(true);
+    }
+    setLoading(false);
   };
 
-  const handleVerify = (id: string) => {
-    const entered  = otpInputs[id] || '';
-    const expected = pendingOtp[id] || '';
-    if (!expected)           { setToastMsg('Request a new OTP first'); setShowToast(true); return; }
-    if (entered !== expected) { setToastMsg('Wrong code. Try again.'); setShowToast(true); return; }
-    verifyContact(id);
-    setPendingOtp(prev => { const n = { ...prev }; delete n[id]; return n; });
-    setOtpInputs(prev  => { const n = { ...prev }; delete n[id]; return n; });
-    refresh();
-    setToastMsg('Contact verified!'); setShowToast(true);
+  const handleDelete = async (id: string, source: 'backend' | 'local') => {
+    if (source === 'backend') {
+      try {
+        await apiDeleteContact(id);
+        await loadContacts();
+        setToastMsg('Contact removed'); setToastColor('success'); setShowToast(true);
+      } catch (err: any) {
+        setToastMsg(err.message || 'Failed to remove'); setToastColor('danger'); setShowToast(true);
+      }
+    } else {
+      removeContact(id);
+      await loadContacts();
+      setToastMsg('Contact removed'); setToastColor('success'); setShowToast(true);
+    }
   };
 
-  const resendOtp = (c: Contact) => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    setPendingOtp(prev => ({ ...prev, [c.id]: otp }));
-    console.log('[OTP] resent for', c.name, ':', otp);
-    setToastMsg('New OTP sent'); setShowToast(true);
-  };
+  const contactToDelete = contacts.find(c => c.id === deleteId);
 
   return (
     <>
       <style>{styles}</style>
 
-      {/* ── Add contact card ── */}
+      {/* Mode indicator */}
+      <span className={`cm-mode-badge ${isOnline ? 'cm-mode-online' : 'cm-mode-offline'}`}>
+        {isOnline ? '🟢 Connected to server' : '🟡 Offline — saving locally'}
+      </span>
+
+      {/* Add contact card */}
       <IonCard style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--clr-primary-border)', margin: '0 0 var(--space-md)', overflow: 'hidden' }}>
         <div className="cm-form-header">
           <IonIcon icon={personAddOutline} style={{ fontSize: '22px', color: 'white' }} />
@@ -180,25 +217,30 @@ const ContactsManager: React.FC = () => {
           </IonItem>
           {addError && (
             <IonText color="danger">
-              <p style={{ fontSize: 'var(--font-xs)', margin: '0 0 var(--space-sm)', fontWeight: 600 }}>
-                {addError}
-              </p>
+              <p style={{ fontSize: 'var(--font-xs)', margin: '0 0 var(--space-sm)', fontWeight: 600 }}>{addError}</p>
             </IonText>
           )}
-          <IonButton expand="block" onClick={handleAdd}
+          <IonButton expand="block" onClick={handleAdd} disabled={loading}
             style={{ '--background': 'var(--clr-primary)', '--border-radius': 'var(--radius-sm)', height: '50px', fontWeight: 700, fontSize: 'var(--font-md)' }}>
             <IonIcon icon={personAddOutline} slot="start" />
-            Add Contact
+            {loading ? 'Adding…' : 'Add Contact'}
           </IonButton>
         </IonCardContent>
       </IonCard>
 
-      {/* ── Contact list ── */}
+      {/* Refresh button */}
+      <IonButton fill="clear" size="small" onClick={loadContacts}
+        style={{ '--color': 'var(--clr-primary-muted)', marginBottom: 'var(--space-sm)' }}>
+        <IonIcon icon={refreshOutline} slot="start" />
+        Refresh
+      </IonButton>
+
+      {/* Contact list */}
       {contacts.length === 0 ? (
         <div className="cm-empty">
           <IonIcon icon={callOutline} style={{ fontSize: '48px', opacity: 0.3 }} />
           <p style={{ margin: '10px 0 0', fontSize: 'var(--font-sm)', fontWeight: 600 }}>No contacts yet</p>
-          <p style={{ margin: '4px 0 0', fontSize: 'var(--font-xs)' }}>Add someone above to receive your alerts</p>
+          <p style={{ margin: '4px 0 0', fontSize: 'var(--font-xs)' }}>Add someone above to receive your SOS alerts</p>
         </div>
       ) : (
         <IonCard style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--clr-primary-border)', margin: '0 0 var(--space-md)' }}>
@@ -211,23 +253,12 @@ const ContactsManager: React.FC = () => {
                   <p style={{ marginTop: '2px', fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)' }}>{c.phone}</p>
                   {c.verified
                     ? <span className="badge-verified"><IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: '11px' }} /> Verified</span>
-                    : <span className="badge-pending">Needs verification</span>
+                    : <span className="badge-pending">Pending verification</span>
                   }
-                  {!c.verified && (
-                    <div className="otp-row">
-                      <input className="otp-mini" type="text" inputMode="numeric" maxLength={6}
-                        placeholder="Enter OTP"
-                        value={otpInputs[c.id] || ''}
-                        onChange={e => setOtpInputs(prev => ({ ...prev, [c.id]: e.target.value }))} />
-                      <IonButton size="small" onClick={() => handleVerify(c.id)}
-                        style={{ '--background': 'var(--clr-primary)', '--border-radius': 'var(--radius-sm)', flexShrink: 0 }}>
-                        <IonIcon icon={checkmarkCircleOutline} />
-                      </IonButton>
-                      <IonButton size="small" fill="outline" onClick={() => resendOtp(c)}
-                        style={{ '--border-radius': 'var(--radius-sm)', '--color': 'var(--clr-primary-muted)', flexShrink: 0 }}>
-                        <IonIcon icon={refreshOutline} />
-                      </IonButton>
-                    </div>
+                  {c.source === 'local' && (
+                    <span style={{ display: 'block', fontSize: '10px', color: 'var(--clr-text-muted)', marginTop: '2px' }}>
+                      Saved locally — will sync when online
+                    </span>
                   )}
                 </div>
                 <button className="cm-delete-btn" onClick={() => setDeleteId(c.id)}>
@@ -244,11 +275,13 @@ const ContactsManager: React.FC = () => {
         message="This contact will no longer receive your emergency alerts."
         buttons={[
           { text: 'Cancel', role: 'cancel' },
-          { text: 'Remove', role: 'destructive', handler: () => { if (deleteId) { removeContact(deleteId); refresh(); } } }
+          { text: 'Remove', role: 'destructive', handler: () => {
+            if (deleteId && contactToDelete) handleDelete(deleteId, contactToDelete.source);
+          }}
         ]} />
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)}
-        message={toastMsg} duration={3000} color="success" position="bottom" />
+        message={toastMsg} duration={3000} color={toastColor} position="bottom" />
     </>
   );
 };

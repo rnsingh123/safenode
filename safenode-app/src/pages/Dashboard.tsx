@@ -23,7 +23,7 @@ import {
   logOutOutline, callOutline, mailOutline,
   bodyOutline, phonePortraitOutline, timeOutline,
   checkmarkCircleOutline, wifiOutline, navigateOutline,
-  peopleOutline, closeOutline
+  peopleOutline, closeOutline, chatbubbleOutline
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import SosButton, { SosButtonHandle } from '../components/sos/SosButton';
@@ -269,69 +269,22 @@ const Dashboard: React.FC = () => {
     <IonContent className="sn-page">
       <div className="sn-header-band">
         <h2 style={{ margin: 0, fontWeight: 900, fontSize: 'var(--font-xl)' }}>Settings</h2>
-        <p style={{ margin: '4px 0 0', fontSize: 'var(--font-sm)', opacity: 0.8 }}>Manage contacts and alert preferences</p>
+        <p style={{ margin: '4px 0 0', fontSize: 'var(--font-sm)', opacity: 0.8 }}>Alert preferences and sensor configuration</p>
       </div>
 
       <div className="tab-content" style={{ padding: '0 var(--space-md) var(--space-xl)' }}>
-
-        {/* ── Safety Features ── */}
-        <p className="sn-section-label">Safety Features</p>
-        <div className="sn-card">
-          <div style={{ padding: '0 var(--space-md)' }}>
-            {([
-              { key: 'fallAlert' as const,       label: 'Fall Alert',        desc: 'Alerts if you fall suddenly',       icon: bodyOutline,          iconBg: 'var(--clr-alert-tint)',   iconColor: 'var(--clr-alert)' },
-              { key: 'shakeAlert' as const,      label: 'Shake to Alert',    desc: 'Shake your phone to call for help', icon: phonePortraitOutline, iconBg: 'var(--clr-warning-tint)', iconColor: 'var(--clr-warning)' },
-              { key: 'noMovementAlert' as const, label: 'No Movement Alert', desc: 'Alerts if no movement for a while', icon: timeOutline,          iconBg: 'var(--clr-primary-tint)', iconColor: 'var(--clr-primary)' },
-            ]).map(item => (
-              <div key={item.key} className="sn-toggle-row">
-                <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
-                  <IonIcon icon={item.icon} style={{ fontSize: '22px', color: item.iconColor }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>{item.label}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>{item.desc}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: settings[item.key] ? 'var(--clr-primary)' : 'var(--clr-text-muted)' }}>
-                    {settings[item.key] ? '● Active — monitoring' : '○ Off'}
-                  </p>
-                </div>
-                <IonToggle checked={settings[item.key]}
-                  onIonChange={() => updateSetting(item.key, !settings[item.key])} color="success" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── GPS Status ── */}
-        <p className="sn-section-label">Location</p>
-        <div className="sn-card">
-          <div style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div className="sn-icon-wrap" style={{ background: 'var(--clr-primary-tint)', flexShrink: 0 }}>
-              <IonIcon icon={navigateOutline} style={{ fontSize: '22px', color: 'var(--clr-primary)' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>GPS Location</p>
-              <p style={{ margin: '3px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)', lineHeight: 1.4 }}>
-                Automatically captured and sent to contacts when SOS is triggered.
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--clr-primary)', display: 'inline-block' }} />
-              <span style={{ fontSize: 'var(--font-xs)', fontWeight: 700, color: 'var(--clr-primary)' }}>Ready</span>
-            </div>
-          </div>
-        </div>
 
         {/* ── Alert Settings ── */}
         <p className="sn-section-label">Alert Settings</p>
         <div className="sn-card">
           <div style={{ padding: '0 var(--space-md)' }}>
             {([
-              { key: 'smsAlerts' as const,      label: 'SMS Alerts',       desc: 'Send text message when SOS is triggered', iconBg: 'var(--clr-primary-tint)', iconColor: 'var(--clr-primary)' },
-              { key: 'locationSharing' as const, label: 'Location Sharing', desc: 'Share your location with contacts',        iconBg: 'var(--clr-alert-tint)',   iconColor: 'var(--clr-alert)' },
+              { key: 'smsAlerts' as const,       label: 'SMS Alerts',       desc: 'Send text message when SOS is triggered', iconBg: 'var(--clr-primary-tint)', iconColor: 'var(--clr-primary)',  icon: chatbubbleOutline },
+              { key: 'locationSharing' as const,  label: 'Location Sharing', desc: 'Share your GPS location with contacts',    iconBg: 'var(--clr-alert-tint)',   iconColor: 'var(--clr-alert)',    icon: navigateOutline },
             ]).map(item => (
               <div key={item.key} className="sn-toggle-row">
                 <div className="sn-icon-wrap" style={{ background: item.iconBg }}>
-                  <IonIcon icon={locationOutline} style={{ fontSize: '22px', color: item.iconColor }} />
+                  <IonIcon icon={item.icon} style={{ fontSize: '22px', color: item.iconColor }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>{item.label}</p>
@@ -345,7 +298,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* ── Sensor Settings ── */}
-        <p className="sn-section-label">Sensor Settings</p>
+        <p className="sn-section-label">Sensor Detection</p>
         <div className="sn-card">
           <div style={{ padding: '0 var(--space-md)' }}>
 
@@ -357,7 +310,10 @@ const Dashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>Fall Detection</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>
-                  Detects sudden fall via accelerometer spike + stillness
+                  Detects sudden fall via accelerometer
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: settings.fallAlert ? 'var(--clr-primary)' : 'var(--clr-text-muted)' }}>
+                  {settings.fallAlert ? '● Active' : '○ Off'}
                 </p>
               </div>
               <IonToggle checked={settings.fallAlert}
@@ -372,7 +328,10 @@ const Dashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>Shake to Alert</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>
-                  Shake phone 3× in 1 second to trigger SOS silently
+                  Shake phone 3× in 1 second to trigger SOS
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: settings.shakeAlert ? 'var(--clr-primary)' : 'var(--clr-text-muted)' }}>
+                  {settings.shakeAlert ? '● Active' : '○ Off'}
                 </p>
               </div>
               <IonToggle checked={settings.shakeAlert}
@@ -387,7 +346,10 @@ const Dashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>Motion Detection</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>
-                  Detects sudden sharp movement — possible struggle
+                  Detects sudden sharp movement or struggle
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: settings.noMovementAlert ? 'var(--clr-primary)' : 'var(--clr-text-muted)' }}>
+                  {settings.noMovementAlert ? '● Active' : '○ Off'}
                 </p>
               </div>
               <IonToggle checked={settings.noMovementAlert}
@@ -405,17 +367,22 @@ const Dashboard: React.FC = () => {
                   Low = fewer false alarms · High = more sensitive
                 </p>
               </div>
-              <IonSelect
-                value={settings.sensitivity}
-                interface="popover"
+              <IonSelect value={settings.sensitivity} interface="popover"
                 onIonChange={e => updateSetting('sensitivity', e.detail.value as Sensitivity)}
-                style={{ fontWeight: 700, color: 'var(--clr-primary)', fontSize: 'var(--font-sm)' }}
-              >
+                style={{ fontWeight: 700, color: 'var(--clr-primary)', fontSize: 'var(--font-sm)' }}>
                 <IonSelectOption value="low">Low</IonSelectOption>
                 <IonSelectOption value="medium">Medium</IonSelectOption>
                 <IonSelectOption value="high">High</IonSelectOption>
               </IonSelect>
             </div>
+
+          </div>
+        </div>
+
+        {/* ── SOS Behaviour ── */}
+        <p className="sn-section-label">SOS Behaviour</p>
+        <div className="sn-card">
+          <div style={{ padding: '0 var(--space-md)' }}>
 
             {/* Auto SOS */}
             <div className="sn-toggle-row">
@@ -425,30 +392,27 @@ const Dashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>Auto SOS on Detection</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>
-                  Automatically start SOS countdown when sensor fires
+                  Start SOS countdown automatically when sensor fires
                 </p>
               </div>
               <IonToggle checked={settings.autoSosOnDetect}
                 onIonChange={() => updateSetting('autoSosOnDetect', !settings.autoSosOnDetect)} color="success" />
             </div>
 
-            {/* SOS Delay */}
+            {/* SOS Countdown */}
             <div className="sn-toggle-row">
               <div className="sn-icon-wrap" style={{ background: 'var(--clr-primary-tint)' }}>
-                <IonIcon icon={navigateOutline} style={{ fontSize: '22px', color: 'var(--clr-primary)' }} />
+                <IonIcon icon={timeOutline} style={{ fontSize: '22px', color: 'var(--clr-primary)' }} />
               </div>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 'var(--font-md)', color: 'var(--clr-text-primary)' }}>SOS Countdown</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--font-xs)', color: 'var(--clr-text-secondary)' }}>
-                  Seconds before alert sends (time to cancel false alarm)
+                  Seconds to cancel before alert sends
                 </p>
               </div>
-              <IonSelect
-                value={settings.sosDelay}
-                interface="popover"
+              <IonSelect value={settings.sosDelay} interface="popover"
                 onIonChange={e => updateSetting('sosDelay', Number(e.detail.value))}
-                style={{ fontWeight: 700, color: 'var(--clr-primary)', fontSize: 'var(--font-sm)' }}
-              >
+                style={{ fontWeight: 700, color: 'var(--clr-primary)', fontSize: 'var(--font-sm)' }}>
                 <IonSelectOption value={5}>5s</IonSelectOption>
                 <IonSelectOption value={10}>10s</IonSelectOption>
                 <IonSelectOption value={15}>15s</IonSelectOption>
@@ -459,19 +423,11 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <IonButton expand="block"
-          onClick={() => { setSaveMsg('Settings saved!'); setTimeout(() => setSaveMsg(''), 2500); }}
-          style={{ '--background': 'var(--clr-primary)', '--border-radius': 'var(--radius-md)', '--box-shadow': 'var(--shadow-md)', height: '54px', fontSize: 'var(--font-md)', fontWeight: 800 }}>
-          <IonIcon icon={checkmarkCircleOutline} slot="start" />
-          Save Settings
-        </IonButton>
-        {saveMsg && (
-          <IonText color="success">
-            <p style={{ textAlign: 'center', marginTop: 'var(--space-sm)', fontWeight: 700, fontSize: 'var(--font-md)' }}>
-              ✓ {saveMsg}
-            </p>
-          </IonText>
-        )}
+        {/* Settings auto-save notice */}
+        <p style={{ textAlign: 'center', fontSize: 'var(--font-xs)', color: 'var(--clr-text-muted)', marginTop: 'var(--space-sm)' }}>
+          ✓ Settings are saved automatically
+        </p>
+
       </div>
     </IonContent>
   );

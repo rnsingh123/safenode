@@ -79,17 +79,28 @@ router.post('/', sosLimiter, async (req, res) => {
       process.env.TWILIO_AUTH_TOKEN
     );
 
-    const sendPromises = contacts.map((contact) =>
-      twilioClient.messages
-        .create({
-          from: process.env.TWILIO_WHATSAPP_FROM,
-          to:   `whatsapp:${contact.phone}`,
+    const sendPromises = contacts.map((contact) => {
+      const promises = [];
+
+      // Send via WhatsApp (Twilio sandbox)
+      // from must be whatsapp:+14155238886
+      // to must be whatsapp:+91XXXXXXXXXX (with country code)
+      const toNumber = contact.phone.startsWith('+')
+        ? `whatsapp:${contact.phone}`
+        : `whatsapp:+91${contact.phone.replace(/\D/g, '').slice(-10)}`;
+
+      promises.push(
+        twilioClient.messages.create({
+          from: process.env.TWILIO_WHATSAPP_FROM,  // whatsapp:+14155238886
+          to:   toNumber,
           body: message,
         })
-        // Log contact ID only — never log phone numbers in production
-        .then(() => console.log(`[SOS] Message sent to contact ID: ${contact._id}`))
-        .catch((err) => console.error(`[SOS] Failed for contact ID ${contact._id}:`, err.message))
-    );
+          .then(() => console.log(`[SOS] WhatsApp sent to contact ID: ${contact._id}`))
+          .catch(err => console.error(`[SOS] WhatsApp failed for ${contact._id}:`, err.message))
+      );
+
+      return Promise.allSettled(promises);
+    });
 
     await Promise.allSettled(sendPromises);
 

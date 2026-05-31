@@ -9,9 +9,16 @@
  * ────────────────────────────────────────────────────────────
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { IonPage, IonContent, IonInput, IonItem, IonButton, IonText } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult
+} from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { setToken, apiFirebaseLogin } from '../services/api';
 
 const styles = `
   /* ── Animations ── */
@@ -229,8 +236,23 @@ const Login: React.FC = () => {
   const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
 
   // OTP flow state
-  const [otpSent, setOtpSent]         = useState(false);   // true after "Send OTP" tapped
-  const [sendingOtp, setSendingOtp]   = useState(false);   // loading while sending
+  const [otpSent, setOtpSent]         = useState(false);
+  const [sendingOtp, setSendingOtp]   = useState(false);
+
+  // Firebase confirmation result — holds the OTP session
+  const confirmationRef  = useRef<ConfirmationResult | null>(null);
+  const recaptchaRef     = useRef<RecaptchaVerifier | null>(null);
+
+  // Create RecaptchaVerifier once on mount — must not be recreated
+  useEffect(() => {
+    recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+    });
+    return () => {
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = null;
+    };
+  }, []);
 
   const handleOtpInput = (index: number, value: string) => {
     if (value.length > 1 || !/^\d*$/.test(value)) return;
@@ -254,50 +276,109 @@ const Login: React.FC = () => {
       (document.getElementById(`otp-${index + 1}`) as HTMLInputElement)?.focus();
   };
 
-  /* ── Send OTP to phone number ───────────────────────────────
-     TODO: Replace the setTimeout simulation with real Firebase:
-
-     import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
-     const auth = getAuth();
-     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
-     const confirmationResult = await signInWithPhoneNumber(auth, `+91${contact}`, window.recaptchaVerifier);
-     window.confirmationResult = confirmationResult;
-
-     Then in handleLogin replace the setTimeout with:
-     const result = await window.confirmationResult.confirm(otp.join(''));
-  ── */
-  const handleSendOtp = () => {
-    if (!contact)             { setError('Please enter your phone number'); return; }
-    if (contact.length < 10)  { setError('Enter a valid 10-digit number'); return; }
+  /* ── Send OTP via Firebase Phone Auth ───────────────────── */
+  const handleSendOtp = async () => {
+    if (!contact)            { setError('Please enter your phone number'); return; }
+    if (contact.length < 10) { setError('Enter a valid 10-digit number'); return; }
     setError('');
     setSendingOtp(true);
 
-    // TODO: Replace with real OTP send (Firebase / Twilio)
-    setTimeout(() => {
+    try {
+      // Format phone with country code — default +91 (India) if not provided
+      const phone = contact.startsWith('+') ? contact : `+91${contact}`;
+
+      if (!recaptchaRef.current) {
+        setError('reCAPTCHA not ready. Please refresh and try again.');
+        setSendingOtp(false);
+        return;
+      }
+
+      // Send OTP — Firebase handles SMS delivery
+      const confirmation = await signInWithPhoneNumber(auth, phone, recaptchaRef.current);
+      confirmationRef.current = confirmation;
+
       setSendingOtp(false);
       setOtpSent(true);
       setOtp(['', '', '', '', '', '']);
-      console.log('[OTP] Simulated OTP sent to:', contact);
-    }, 1200);
+    } catch (err: any) {
+      setSendingOtp(false);
+      console.error('[Firebase] Send OTP error:', err.code, err.message);
+      if (err.code === 'auth/invalid-phone-number')
+        setError('Invalid phone number. Use format: +91XXXXXXXXXX');
+      else if (err.code === 'auth/too-many-requests')
+        setError('Too many attempts. Please wait a few minutes.');
+      else if (err.code === 'auth/captcha-check-failed')
+        setError('reCAPTCHA failed. Please refresh and try again.');
+      else
+        setError(`Failed to send OTP: ${err.message}`);
+    }
   };
 
-  /* ── [AUTH LOGIC — unchanged] ── */
-  const handleLogin = () => {
+  /* ── Verify OTP and login ────────────────────────────────── */
+  const handleLogin = async () => {
     if (!contact)                                           { setError('Please enter your phone number'); return; }
     if (contact.length < 10)                                { setError('Enter a valid 10-digit number'); return; }
     if (loginMethod === 'otp' && otp.join('').length !== 6) { setError('Please enter all 6 digits'); return; }
     if (loginMethod === 'password' && !password)            { setError('Please enter your password'); return; }
     setError(''); setLoading(true);
-    setTimeout(() => {
+
+    try {
+      if (loginMethod === 'otp') {
+        if (!confirmationRef.current) {
+          setError('Please request an OTP first'); setLoading(false); return;
+        }
+
+        // Step 1: Verify OTP with Firebase
+        const result  = await confirmationRef.current.confirm(otp.join(''));
+        const idToken = await result.user.getIdToken();
+
+        // Step 2: Try to exchange Firebase token for our backend JWT
+        // Falls back to Firebase user data if backend is not running
+        try {
+          const response = await apiFirebaseLogin(idToken, undefined, null);
+          setToken(response.token);
+          sessionStorage.setItem('user', JSON.stringify({
+            username:    `user_${contact.slice(-4)}`,
+            displayName: response.user.displayName || `User ${contact.slice(-4)}`,
+            contact:     response.user.phone || contact,
+            email:       response.user.email || `user${contact.slice(-4)}@safenode.app`,
+          }));
+        } catch {
+          // Backend not running — store Firebase user data directly for testing
+          console.warn('[Login] Backend unavailable — using Firebase user data');
+          sessionStorage.setItem('user', JSON.stringify({
+            username:    `user_${contact.slice(-4)}`,
+            displayName: `User ${contact.slice(-4)}`,
+            contact,
+            email:       `user${contact.slice(-4)}@safenode.app`,
+          }));
+        }
+
+      } else {
+        // Password login
+        const { apiLogin } = await import('../services/api');
+        const response = await apiLogin(contact, password);
+        setToken(response.token);
+        sessionStorage.setItem('user', JSON.stringify({
+          username:    `user_${contact.slice(-4)}`,
+          displayName: response.user.displayName,
+          contact:     response.user.phone || contact,
+          email:       response.user.email,
+        }));
+      }
+
       setLoading(false);
-      sessionStorage.setItem('user', JSON.stringify({
-        username:    `user_${contact.slice(-4)}`,
-        displayName: `User ${contact.slice(-4)}`,
-        contact,
-        email:       `user${contact.slice(-4)}@safenode.app`
-      }));
       history.push('/dashboard');
-    }, 1500);
+    } catch (err: any) {
+      setLoading(false);
+      console.error('[Login] Error:', err.code, err.message);
+      if (err.code === 'auth/invalid-verification-code')
+        setError('Wrong code. Please check and try again.');
+      else if (err.code === 'auth/code-expired')
+        setError('Code expired. Please request a new OTP.');
+      else
+        setError(err.message || 'Login failed. Please try again.');
+    }
   };
 
   return (
@@ -305,6 +386,9 @@ const Login: React.FC = () => {
       <style>{styles}</style>
       <IonContent scrollY={true}>
         <div className="login-page">
+
+          {/* Invisible reCAPTCHA — required by Firebase Phone Auth */}
+          <div id="recaptcha-container" />
 
           {/* ── Hero ── */}
           <div className="login-hero">

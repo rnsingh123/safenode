@@ -53,25 +53,19 @@ router.post('/', contactLimiter, async (req, res) => {
     return res.status(400).json({ message: 'Invalid phone number format' });
 
   try {
-    // Generate 6-digit OTP
-    const otp       = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // expires in 5 minutes
-
     const contact = await Contact.create({
       userId:    req.user._id,
       name:      name.trim(),
       phone:     phone.trim(),
-      verified:  false,
-      otp,
-      otpExpiry,
+      verified:  true,   // Auto-verified — add OTP flow when SMS service is ready
+      otp:       null,
+      otpExpiry: null,
     });
 
-    // TODO: Send real OTP via Twilio WhatsApp
-    // Never log the OTP value in production
-    console.log(`[OTP] Code generated for contact ID: ${contact._id}`);
+    console.log(`[CONTACTS] Added and auto-verified: ${contact._id}`);
 
     res.status(201).json({
-      message: 'Contact added. OTP sent for verification.',
+      message: 'Contact added successfully.',
       contact: {
         id:       contact._id,
         name:     contact.name,

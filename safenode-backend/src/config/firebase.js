@@ -30,7 +30,10 @@ const initFirebase = () => {
     }
     // Option B: Service account JSON file path
     else if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-      const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+      const path = require('path');
+      // Resolve relative to project root (safenode-backend/), not this file
+      const absolutePath = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+      const serviceAccount = require(absolutePath);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
