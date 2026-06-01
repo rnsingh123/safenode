@@ -347,6 +347,7 @@ const Login: React.FC = () => {
           // Backend unavailable — store Firebase user data for UI
           // SOS will not work without a backend token
           console.warn('[Login] Backend unavailable:', backendErr.message);
+          setError(`Backend error: ${backendErr.message} — SOS will not work`);
           sessionStorage.setItem('user', JSON.stringify({
             username:    `user_${contact.slice(-4)}`,
             displayName: `User ${contact.slice(-4)}`,
