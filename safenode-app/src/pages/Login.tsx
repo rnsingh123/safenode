@@ -343,15 +343,17 @@ const Login: React.FC = () => {
             contact:     response.user.phone || contact,
             email:       response.user.email || `user${contact.slice(-4)}@safenode.app`,
           }));
-        } catch {
-          // Backend not running — store Firebase user data directly for testing
-          console.warn('[Login] Backend unavailable — using Firebase user data');
+        } catch (backendErr: any) {
+          // Backend unavailable — store Firebase user data for UI
+          // SOS will not work without a backend token
+          console.warn('[Login] Backend unavailable:', backendErr.message);
           sessionStorage.setItem('user', JSON.stringify({
             username:    `user_${contact.slice(-4)}`,
             displayName: `User ${contact.slice(-4)}`,
             contact,
             email:       `user${contact.slice(-4)}@safenode.app`,
           }));
+          // Show warning but still navigate — user can retry SOS when backend is up
         }
 
       } else {

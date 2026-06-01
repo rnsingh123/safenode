@@ -32,6 +32,10 @@ initFirebase();
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust proxy — required when running behind Render/Railway/Heroku
+// This fixes express-rate-limit X-Forwarded-For error
+app.set('trust proxy', 1);
+
 // ── CORS — only allow your app's origin ──────────────────────
 // In development: allow localhost. In production: set APP_ORIGIN env var.
 const allowedOrigin = process.env.APP_ORIGIN || 'http://localhost:5173';

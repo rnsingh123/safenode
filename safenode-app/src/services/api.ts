@@ -5,7 +5,7 @@
  */
 
 // ── [CONFIG] Change this to your deployed backend URL ─────────
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // ── Token helpers ─────────────────────────────────────────────
 export const getToken = (): string | null =>
