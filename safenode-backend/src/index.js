@@ -38,8 +38,23 @@ app.set('trust proxy', 1);
 
 // ── CORS — only allow your app's origin ──────────────────────
 // In development: allow localhost. In production: set APP_ORIGIN env var.
-const allowedOrigin = process.env.APP_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: allowedOrigin }));
+const allowedOrigins = [
+  process.env.APP_ORIGIN,
+  "https://localhost"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+}));
 
 // ── Body parser — limit payload size to prevent abuse ─────────
 app.use(express.json({ limit: '10kb' }));

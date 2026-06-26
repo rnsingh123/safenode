@@ -195,13 +195,29 @@ const SosButton = forwardRef<SosButtonHandle, Props>(({ onAlertSent }, ref) => {
     let lat = 0, lng = 0;
 
     try {
-      const permission = await Geolocation.requestPermissions();
-      if (permission.location === 'granted') {
-        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+      // Try Capacitor Geolocation first (native APK)
+      // Fall back to browser navigator.geolocation (web/laptop)
+      const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+
+      if (isNative) {
+        const permission = await Geolocation.requestPermissions();
+        if (permission.location === 'granted') {
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        } else {
+          throw new Error('Location permission denied');
+        }
+      } else {
+        // Browser geolocation — works on laptop/desktop
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+        });
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
-      } else {
-        throw new Error('Location permission denied');
       }
     } catch (geoErr: any) {
       console.warn('[SOS] GPS failed:', geoErr.message);
