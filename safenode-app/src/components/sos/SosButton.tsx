@@ -185,12 +185,17 @@ const SosButton = forwardRef<SosButtonHandle, Props>(({ onAlertSent }, ref) => {
     setSensorTrigger(null);
     setSending(true);
 
-    // Start loud alarm immediately — works offline
-    alarmService.start();
-    setAlarmPlaying(true);
+    // Play alarm only when device is offline
+       if (!navigator.onLine) {
+            alarmService.start();
+            setAlarmPlaying(true);
 
-    // Auto-stop alarm after 30 seconds
-    setTimeout(() => { alarmService.stop(); setAlarmPlaying(false); }, 30000);
+    // Stop after 30 seconds
+         setTimeout(() => {
+            alarmService.stop();
+            setAlarmPlaying(false);
+                }, 30000);
+}
 
     let lat = 0, lng = 0;
 

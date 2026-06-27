@@ -21,6 +21,7 @@
  * ============================================================================
  */
 
+import { getToken } from './services/api';
 import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
@@ -80,8 +81,16 @@ const App: React.FC = () => (
         
         {/* Default Route - Go to register if first time, else login */}
         <Route exact path="/">
-          <Redirect to={getUserIdentity() ? '/login' : '/register'} />
-        </Route>
+  {getUserIdentity() ? (
+    getToken() ? (
+      <Redirect to="/dashboard" />
+    ) : (
+      <Redirect to="/login" />
+    )
+  ) : (
+    <Redirect to="/register" />
+  )}
+</Route>
       </IonRouterOutlet>
     </IonReactRouter>
   </IonApp>

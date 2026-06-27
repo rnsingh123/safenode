@@ -9,13 +9,13 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // ── Token helpers ─────────────────────────────────────────────
 export const getToken = (): string | null =>
-  sessionStorage.getItem('token');
+  localStorage.getItem('token');
 
 export const setToken = (token: string): void =>
-  sessionStorage.setItem('token', token);
+  localStorage.setItem('token', token);
 
 export const clearToken = (): void =>
-  sessionStorage.removeItem('token');
+  localStorage.removeItem('token');
 
 // ── Base fetch wrapper ────────────────────────────────────────
 const request = async (path: string, options: RequestInit = {}) => {

@@ -9,7 +9,7 @@
  *  Tab bar               → IonTabBar at bottom of return
  * ────────────────────────────────────────────────────────────
  */
-
+import { clearToken } from '../services/api';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   IonPage, IonContent, IonHeader, IonToolbar, IonTitle,
@@ -170,7 +170,7 @@ const Dashboard: React.FC = () => {
 
   /* ── [AUTH GUARD] ── */
   useEffect(() => {
-    const stored = sessionStorage.getItem('user');
+    const stored = localStorage.getItem('user');
     if (!stored) { history.replace('/login'); return; }
     setUserProfile(JSON.parse(stored));
   }, [history]);
@@ -204,7 +204,7 @@ const Dashboard: React.FC = () => {
     if (tempName.trim()) {
       const updated = { ...userProfile, displayName: tempName.trim() };
       setUserProfile(updated);
-      sessionStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem('user', JSON.stringify(updated));
     }
     setEditingName(false);
   };
@@ -213,7 +213,7 @@ const Dashboard: React.FC = () => {
     if (tempEmail.trim()) {
       const updated = { ...userProfile, email: tempEmail.trim() };
       setUserProfile(updated);
-      sessionStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem('user', JSON.stringify(updated));
     }
     setEditingEmail(false);
   };
@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
     if (tempPhone.trim()) {
       const updated = { ...userProfile, contact: tempPhone.trim() };
       setUserProfile(updated);
-      sessionStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem('user', JSON.stringify(updated));
     }
     setEditingPhone(false);
   };
@@ -237,7 +237,12 @@ const Dashboard: React.FC = () => {
     // apiSaveIdentity(tempIdentity).catch(err => console.warn('[Profile] Backend sync failed:', err.message));
   };
 
-  const handleLogout = () => { sessionStorage.removeItem('user'); history.replace('/login'); };
+  const handleLogout = () => {
+  clearToken();                 // Remove JWT token
+  localStorage.removeItem('user'); // Remove saved user
+
+  history.replace('/login');
+};
 
   /* ══════════════════════════════════════════════════════════
      TAB 1 — HOME
@@ -604,10 +609,10 @@ const Dashboard: React.FC = () => {
             <div style={{ padding: 'var(--space-md)' }}>
               {[
                 { label: '👤 Name',          value: identity.fullName },
-                { label: '🎂 Age',           value: identity.age },
-                { label: '🩸 Blood Group',   value: identity.bloodGroup },
-                { label: '🏠 Address',       value: identity.address },
-                { label: '📋 Medical Notes', value: identity.note },
+                { label: ' Age',           value: identity.age },
+                { label: ' Blood Group',   value: identity.bloodGroup },
+                { label: 'Home Address',       value: identity.address },
+                { label: ' Medical Notes(if any)', value: identity.note },
               ].filter(r => r.value).map((row, i, arr) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--clr-primary-tint)' : 'none' }}>
                   <span style={{ fontSize: 'var(--font-sm)', color: 'var(--clr-text-secondary)', fontWeight: 600, flexShrink: 0 }}>{row.label}</span>
